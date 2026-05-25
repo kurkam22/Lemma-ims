@@ -482,7 +482,7 @@ function qualityChecks(text: string): string[] {
   const codeMatches = text.match(/[A-Z]{2,4}-\d{3,}/g) ?? []
   const counts = new Map<string, number>()
   for (const m of codeMatches) counts.set(m, (counts.get(m) ?? 0) + 1)
-  for (const [code, n] of counts) {
+  for (const [code, n] of Array.from(counts)) {
     if (n > 3) issues.push(`Document code "${code}" appears ${n} times — check for duplicate references`)
   }
 
