@@ -136,7 +136,7 @@ export default function ReportsPage() {
             </table>
           </div>
         )}
-        <p className="text-[11px] text-gray-500 mt-2">History shows when each report was generated. The CSV is downloaded to your browser at generation time — we don't keep the file contents.</p>
+        <p className="text-[11px] text-gray-500 mt-2">History shows when each report was generated. The CSV is downloaded to your browser at generation time — we do not keep the file contents.</p>
       </div>
     </div>
   )

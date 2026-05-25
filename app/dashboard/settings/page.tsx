@@ -216,7 +216,7 @@ export default function SettingsPage() {
   )
 }
 
-function normaliseUser(row: any): UserRow {
+function normaliseUser(row: unknown): UserRow {
   return {
     id: row.id,
     email: row.email,
