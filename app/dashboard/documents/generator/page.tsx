@@ -452,7 +452,7 @@ function RightPanel({ company, documentType, qualityIssues, savedDocId, savedCod
             <div className="mt-1 font-mono text-[10px] text-gray-500">{savedCode}</div>
           </div>
         ) : (
-          <p className="text-xs text-gray-500">Not saved yet. Click "Save draft" or "Confirm as official" to store this document.</p>
+          <p className="text-xs text-gray-500">Not saved yet. Click &quot;Save draft&quot; or &quot;Confirm as official&quot; to store this document.</p>
         )}
       </div>
     </aside>
