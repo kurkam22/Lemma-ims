@@ -1,7 +1,9 @@
 import { NextResponse } from 'next/server'
 import Anthropic from '@anthropic-ai/sdk'
+import { requireUser } from '@/lib/api/auth'
+import { checkRateLimit, rateLimitResponse } from '@/lib/api/rate-limit'
 
-const SYSTEM_PROMPT = `You are a classifier for ISO 9001 evidence files. Given a filename, classify the evidence type and identify which ISO 9001 clauses it likely relates to.
+const SYSTEM_PROMPT = `You are a classifier for ISO 9001 evidence files. Given a filename (and, when available, an excerpt of the file's text content), classify the evidence type and identify which ISO 9001 clauses it likely relates to. When content is provided, weight it more heavily than the filename.
 
 ISO 9001 clauses and what they cover:
 4.1 Context, 4.2 Interested parties, 4.3 Scope, 4.4 Processes, 5.2 Quality policy, 6.1 Risks, 6.2 Objectives, 7.2 Competence, 7.3 Awareness, 7.4 Communication, 7.5 Documents, 8.1 Operations, 8.2 Customer requirements, 8.4 Suppliers, 8.5 Production, 9.1 Monitoring, 9.2 Internal audit, 9.3 Management review, 10.2 CAPA, 10.3 Improvement.
@@ -15,8 +17,20 @@ Respond with a JSON object only, no prose, no markdown fences. Schema:
   "confidence": "high" | "medium" | "low"
 }`
 
+const MAX_FILENAME_LEN = 300
+const MAX_EXCERPT_LEN = 4000
+
 export async function POST(req: Request) {
-  let body: { fileName?: string }
+  // Auth: this route spends Anthropic credits — never expose it publicly.
+  const auth = await requireUser()
+  if (!auth.ok) {
+    return NextResponse.json({ error: auth.error }, { status: auth.status })
+  }
+
+  const rl = await checkRateLimit(auth.userId, 'classify')
+  if (!rl.allowed) return rateLimitResponse(rl)
+
+  let body: { fileName?: string; textExcerpt?: string }
   try {
     body = await req.json()
   } catch {
@@ -27,6 +41,14 @@ export async function POST(req: Request) {
   if (!fileName || typeof fileName !== 'string') {
     return NextResponse.json({ error: 'fileName required' }, { status: 400 })
   }
+  if (fileName.length > MAX_FILENAME_LEN) {
+    return NextResponse.json({ error: 'fileName too long' }, { status: 400 })
+  }
+
+  const excerpt =
+    typeof body.textExcerpt === 'string'
+      ? body.textExcerpt.slice(0, MAX_EXCERPT_LEN)
+      : null
 
   const apiKey = process.env.ANTHROPIC_API_KEY
   if (!apiKey) {
@@ -35,17 +57,16 @@ export async function POST(req: Request) {
 
   const anthropic = new Anthropic({ apiKey })
 
+  const userContent = excerpt
+    ? `Classify this evidence file.\nFilename: "${fileName}"\nContent excerpt:\n"""\n${excerpt}\n"""`
+    : `Classify this evidence file: "${fileName}"`
+
   try {
     const msg = await anthropic.messages.create({
       model: 'claude-haiku-4-5-20251001',
       max_tokens: 300,
       system: SYSTEM_PROMPT,
-      messages: [
-        {
-          role: 'user',
-          content: `Classify this evidence file: "${fileName}"`,
-        },
-      ],
+      messages: [{ role: 'user', content: userContent }],
     })
 
     const textBlock = msg.content.find((b) => b.type === 'text')

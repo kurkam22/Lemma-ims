@@ -145,6 +145,7 @@ export default function Sidebar({
     {
       title: 'COMPLIANCE',
       items: [
+        { label: 'AI compliance check', href: '/dashboard/compliance-check', icon: 'sparkle' },
         { label: 'Gap assessment', href: '/dashboard/gap-assessment', icon: 'shield' },
         { label: 'Evidence', href: '/dashboard/evidence', icon: 'shield' },
         { label: 'Risk', href: '/dashboard/risk', icon: 'shield' },

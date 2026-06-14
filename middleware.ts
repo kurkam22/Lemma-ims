@@ -3,6 +3,11 @@ import { NextResponse, type NextRequest } from 'next/server'
 
 const PUBLIC_PATHS = ['/login', '/register', '/auth/callback']
 
+function isPublicPath(path: string) {
+  if (path === '/') return true // public landing page
+  return PUBLIC_PATHS.some((p) => path === p || path.startsWith(p + '/'))
+}
+
 export async function middleware(request: NextRequest) {
   let response = NextResponse.next({ request })
 
@@ -26,16 +31,25 @@ export async function middleware(request: NextRequest) {
   )
 
   const path = request.nextUrl.pathname
-  const isPublic = PUBLIC_PATHS.some((p) => path === p || path.startsWith(p + '/'))
+  const isPublic = isPublicPath(path)
 
   let user = null
   try {
     const result = await supabase.auth.getUser()
     user = result.data.user
   } catch (err) {
-    // If we can't reach Supabase (TLS, network, etc.) don't lock the user
-    // out of the entire app — let the request through and log loudly.
     console.error('[middleware] supabase.auth.getUser() threw:', err)
+    // Dev convenience: local TLS/network hiccups shouldn't lock you out.
+    // In production this must FAIL CLOSED — letting unauthenticated
+    // requests through on an auth-service error is an open door.
+    if (process.env.NODE_ENV !== 'production') {
+      return response
+    }
+    if (!isPublic) {
+      const url = request.nextUrl.clone()
+      url.pathname = '/login'
+      return NextResponse.redirect(url)
+    }
     return response
   }
 
@@ -46,7 +60,7 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(url)
   }
 
-  if (user && (path === '/login' || path === '/register')) {
+  if (user && (path === '/' || path === '/login' || path === '/register')) {
     console.log('[middleware] user already signed in → redirecting to /dashboard')
     const url = request.nextUrl.clone()
     url.pathname = '/dashboard'

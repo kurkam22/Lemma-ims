@@ -36,6 +36,29 @@ export default function LoginPage() {
     router.refresh()
   }
 
+  // Demo auto-login: only renders when both env vars are set.
+  // Remove the env vars in Vercel to disable it — no code change needed.
+  const demoEmail = process.env.NEXT_PUBLIC_DEMO_EMAIL
+  const demoPassword = process.env.NEXT_PUBLIC_DEMO_PASSWORD
+  const demoEnabled = Boolean(demoEmail && demoPassword)
+
+  async function onDemoLogin() {
+    if (!demoEmail || !demoPassword) return
+    setError(null)
+    setLoading(true)
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email: demoEmail,
+      password: demoPassword,
+    })
+    setLoading(false)
+    if (error || !data?.session) {
+      setError(error?.message ?? 'Demo login failed — check the demo account exists.')
+      return
+    }
+    router.push('/dashboard')
+    router.refresh()
+  }
+
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center px-4">
       <div className="w-full max-w-md">
@@ -97,6 +120,17 @@ export default function LoginPage() {
               {loading ? 'Signing in…' : 'Sign in'}
             </button>
           </form>
+
+          {demoEnabled && (
+            <button
+              type="button"
+              onClick={onDemoLogin}
+              disabled={loading}
+              className="mt-3 w-full border border-gray-300 hover:bg-gray-50 disabled:opacity-50 text-gray-700 text-sm font-medium px-4 py-2 rounded-md"
+            >
+              Try the demo (no sign-up)
+            </button>
+          )}
 
           <p className="text-sm text-gray-600 text-center mt-6">
             Don&apos;t have an account?{' '}

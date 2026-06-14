@@ -1,11 +1,24 @@
 import { NextResponse } from 'next/server'
 import Anthropic from '@anthropic-ai/sdk'
+import { requireUser } from '@/lib/api/auth'
+import { checkRateLimit, rateLimitResponse } from '@/lib/api/rate-limit'
 
 const SYSTEM = `You are an ISO 9001 management review facilitator. Given a company's current QMS data, produce a focused, practical management review agenda. The agenda must cover the standard's required inputs (clause 9.3): status of actions from previous reviews, changes in external/internal issues, customer satisfaction and feedback, quality objectives performance, process performance and product conformity, nonconformities and corrective actions, audit results, performance of external providers, resource adequacy, effectiveness of actions taken to address risks and opportunities, and opportunities for improvement.
 
 Output a numbered agenda in plain markdown. For each item, include a one-line note that references the data provided (e.g. "3 open CAPAs, 1 overdue"). Keep the tone direct and useful for a leadership meeting — no fluff.`
 
+const MAX_DATA_CHARS = 20_000
+
 export async function POST(req: Request) {
+  // Auth: this route spends Anthropic credits — never expose it publicly.
+  const auth = await requireUser()
+  if (!auth.ok) {
+    return NextResponse.json({ error: auth.error }, { status: auth.status })
+  }
+
+  const rl = await checkRateLimit(auth.userId, 'agenda')
+  if (!rl.allowed) return rateLimitResponse(rl)
+
   let body: { data?: Record<string, unknown> }
   try {
     body = await req.json()
@@ -28,7 +41,7 @@ export async function POST(req: Request) {
       messages: [
         {
           role: 'user',
-          content: `Generate the management review agenda from this data:\n\n${JSON.stringify(body.data ?? {}, null, 2)}`,
+          content: `Generate the management review agenda from this data:\n\n${JSON.stringify(body.data ?? {}, null, 2).slice(0, MAX_DATA_CHARS)}`,
         },
       ],
     })

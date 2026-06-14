@@ -217,13 +217,17 @@ export default function SettingsPage() {
 }
 
 function normaliseUser(row: unknown): UserRow {
+  const r = (row ?? {}) as Partial<UserRow> & Record<string, unknown>
   return {
-    id: row.id,
-    email: row.email,
-    full_name: row.full_name ?? null,
-    role: row.role ?? 'member',
-    department: row.department ?? null,
-    notification_prefs: row.notification_prefs ?? { email_reminders: true },
+    id: String(r.id ?? ''),
+    email: String(r.email ?? ''),
+    full_name: (r.full_name as string | null) ?? null,
+    role: (r.role as string) ?? 'member',
+    department: (r.department as string | null) ?? null,
+    notification_prefs:
+      (r.notification_prefs as UserRow['notification_prefs']) ?? {
+        email_reminders: true,
+      },
   }
 }
 

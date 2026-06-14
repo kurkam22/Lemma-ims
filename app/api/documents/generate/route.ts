@@ -1,5 +1,9 @@
 import Anthropic from '@anthropic-ai/sdk'
 import { createClient } from '@/lib/supabase/server'
+import { requireUser, jsonError } from '@/lib/api/auth'
+import { checkRateLimit, rateLimitResponse } from '@/lib/api/rate-limit'
+
+export const maxDuration = 60
 
 const SYSTEM_PROMPT = `You are an ISO 9001 compliance document writer for Lemma IMS, an AI-assisted ISO compliance platform.
 
@@ -123,32 +127,25 @@ export async function POST(req: Request) {
     )
   }
 
-  const supabase = createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-  if (!user) {
-    return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-      status: 401,
-      headers: { 'Content-Type': 'application/json' },
-    })
+  const auth = await requireUser(companyId)
+  if (!auth.ok) {
+    return jsonError(auth.status, auth.error)
   }
 
-  const { data: userRow } = await supabase
-    .from('users')
-    .select('company_id')
-    .eq('id', user.id)
-    .maybeSingle()
-  if (!userRow?.company_id || userRow.company_id !== companyId) {
-    return new Response(JSON.stringify({ error: 'Forbidden' }), {
-      status: 403,
-      headers: { 'Content-Type': 'application/json' },
-    })
-  }
+  const rl = await checkRateLimit(auth.userId, 'generate')
+  if (!rl.allowed) return rateLimitResponse(rl)
+
+  const supabase = createClient()
+
+  const COMPANY_PROMPT_COLUMNS =
+    'name, industry, country, certification_goal, document_language, ' +
+    'target_date, employee_count, director_name, qms_manager_name, ' +
+    'department_heads, sites, consultant_name, processes, ' +
+    'quality_objectives, document_code_prefix'
 
   const { data: company } = await supabase
     .from('companies')
-    .select('*')
+    .select(COMPANY_PROMPT_COLUMNS)
     .eq('id', companyId)
     .maybeSingle()
   if (!company) {
@@ -176,7 +173,13 @@ export async function POST(req: Request) {
 Document type to generate: ${documentType}
 
 Company data (only confirmed fields — anything else must be [TO CONFIRM]):
-${JSON.stringify(company, null, 2)}
+${JSON.stringify(
+    Object.fromEntries(
+      Object.entries(company).filter(([, v]) => v !== null && v !== '')
+    ),
+    null,
+    2
+  )}
 
 Generate the document now.`
 
@@ -187,7 +190,7 @@ Generate the document now.`
       try {
         const messageStream = anthropic.messages.stream({
           model: 'claude-sonnet-4-6',
-          max_tokens: 4096,
+          max_tokens: 8000,
           system: [
             {
               type: 'text',
