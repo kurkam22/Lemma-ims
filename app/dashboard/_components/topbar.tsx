@@ -1,11 +1,35 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
+import { createClient } from '@/lib/supabase/client'
 
 type Lang = 'EN' | 'RU' | 'UZ'
 
 export default function TopBar({ companyName }: { companyName: string | null }) {
   const [lang, setLang] = useState<Lang>('EN')
+  const [menuOpen, setMenuOpen] = useState(false)
+  const [signingOut, setSigningOut] = useState(false)
+  const menuRef = useRef<HTMLDivElement>(null)
+  const router = useRouter()
+
+  useEffect(() => {
+    function onClick(e: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setMenuOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', onClick)
+    return () => document.removeEventListener('mousedown', onClick)
+  }, [])
+
+  async function onSignOut() {
+    setSigningOut(true)
+    const supabase = createClient()
+    await supabase.auth.signOut()
+    router.push('/login')
+    router.refresh()
+  }
 
   return (
     <header className="bg-white border-b border-gray-200 h-14 flex items-center px-6 gap-4">
@@ -90,6 +114,48 @@ export default function TopBar({ companyName }: { companyName: string | null }) 
               {l}
             </button>
           ))}
+        </div>
+
+        <div className="relative" ref={menuRef}>
+          <button
+            type="button"
+            title="Account"
+            aria-label="Account menu"
+            onClick={() => setMenuOpen((o) => !o)}
+            className="p-1.5 rounded-md text-gray-500 hover:bg-gray-100 hover:text-gray-700"
+          >
+            <svg
+              className="w-4 h-4"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth={2}
+              viewBox="0 0 24 24"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <circle cx="12" cy="8" r="4" />
+              <path d="M4 21c0-4 4-6 8-6s8 2 8 6" />
+            </svg>
+          </button>
+
+          {menuOpen && (
+            <div className="absolute right-0 mt-1.5 w-44 bg-white border border-gray-200 rounded-md shadow-lg py-1 z-20">
+              <a
+                href="/dashboard/settings"
+                className="block px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
+              >
+                Settings
+              </a>
+              <button
+                type="button"
+                onClick={onSignOut}
+                disabled={signingOut}
+                className="w-full text-left px-3 py-2 text-sm text-red-600 hover:bg-red-50 disabled:opacity-50"
+              >
+                {signingOut ? 'Signing out…' : 'Sign out'}
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </header>
