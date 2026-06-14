@@ -130,6 +130,7 @@ export default function Sidebar({
       title: 'STANDARDS',
       items: [
         { label: 'Standards library', href: '/dashboard/standards', icon: 'layers' },
+        { label: 'Standards catalogue', href: '/dashboard/standards-catalogue', icon: 'layers' },
         { label: 'Process map', href: '/dashboard/processes', icon: 'layers' },
       ],
     },
