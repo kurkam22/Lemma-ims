@@ -1,7 +1,7 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
-const PUBLIC_PATHS = ['/login', '/register', '/auth/callback']
+const PUBLIC_PATHS = ['/login', '/register', '/auth/callback', '/demo']
 
 function isPublicPath(path: string) {
   if (path === '/') return true // public landing page

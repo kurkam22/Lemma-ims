@@ -63,10 +63,10 @@ export default function Home() {
             Start free
           </Link>
           <Link
-            href="/login"
+            href="/demo"
             className="border border-gray-300 hover:bg-gray-50 text-gray-700 font-medium px-6 py-3 rounded-md"
           >
-            Sign in
+            View live demo
           </Link>
         </div>
         <div className="mt-10 flex flex-wrap items-center justify-center gap-2">
