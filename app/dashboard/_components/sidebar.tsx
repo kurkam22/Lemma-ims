@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import { useState, useEffect } from 'react'
 
 type IconName =
   | 'home'
@@ -104,64 +105,76 @@ export default function Sidebar({
   openCapaCount: number
 }) {
   const pathname = usePathname()
+  const [mobileOpen, setMobileOpen] = useState(false)
+
+  useEffect(() => {
+    setMobileOpen(false)
+  }, [pathname])
 
   const sections: NavSection[] = [
     {
       items: [{ label: 'Dashboard', href: '/dashboard', icon: 'home' }],
     },
     {
-      title: 'SETUP',
+      title: 'START / SETUP',
       items: [
         {
-          label: 'Company setup',
+          label: 'Company profile',
           href: '/dashboard/setup',
           icon: 'building',
           substeps: [
-            { label: 'Basics + upload', href: '/dashboard/setup/step1' },
-            { label: 'Review AI findings', href: '/dashboard/setup/step2' },
+            { label: 'Upload documents', href: '/dashboard/setup/step1' },
+            { label: 'AI findings', href: '/dashboard/setup/step2' },
             { label: 'Team & sites', href: '/dashboard/setup/step3' },
             { label: 'Processes & goals', href: '/dashboard/setup/step4' },
-            { label: 'Next steps', href: '/dashboard/setup/step5' },
+            { label: 'Implementation plan', href: '/dashboard/setup/step5' },
           ],
         },
       ],
     },
     {
-      title: 'STANDARDS',
+      title: 'STANDARDS & REQUIREMENTS',
       items: [
         { label: 'Standards library', href: '/dashboard/standards', icon: 'layers' },
-        { label: 'Standards catalogue', href: '/dashboard/standards-catalogue', icon: 'layers' },
+        { label: 'Clause requirements', href: '/dashboard/standards-catalogue', icon: 'layers' },
         { label: 'Process map', href: '/dashboard/processes', icon: 'layers' },
       ],
     },
     {
       title: 'DOCUMENTS',
       items: [
-        { label: 'Required documents', href: '/dashboard/documents', icon: 'file' },
-        { label: 'AI generator', href: '/dashboard/documents/generator', icon: 'file' },
+        { label: 'Required documents', href: '/dashboard/required-documents', icon: 'sparkle' },
+        { label: 'AI document generator', href: '/dashboard/documents/generator', icon: 'file' },
         { label: 'Document centre', href: '/dashboard/documents/centre', icon: 'file' },
         { label: 'Export centre', href: '/dashboard/documents/export', icon: 'file' },
       ],
     },
     {
-      title: 'COMPLIANCE',
+      title: 'IMPLEMENTATION',
       items: [
-        { label: 'AI compliance check', href: '/dashboard/compliance-check', icon: 'sparkle' },
-        { label: 'Gap assessment', href: '/dashboard/gap-assessment', icon: 'shield' },
         { label: 'Evidence', href: '/dashboard/evidence', icon: 'shield' },
-        { label: 'Risk', href: '/dashboard/risk', icon: 'shield' },
-        { label: 'Audits', href: '/dashboard/audits', icon: 'shield' },
-        { label: 'CAPA', href: '/dashboard/capa', icon: 'shield', badgeCount: openCapaCount },
-        { label: 'Management review', href: '/dashboard/management-review', icon: 'shield' },
-        { label: 'Suppliers', href: '/dashboard/suppliers', icon: 'shield' },
         { label: 'Training', href: '/dashboard/training', icon: 'shield' },
+        { label: 'Suppliers', href: '/dashboard/suppliers', icon: 'shield' },
+        { label: 'Risks & opportunities', href: '/dashboard/risk', icon: 'shield' },
       ],
     },
     {
-      title: 'REPORTS',
+      title: 'CHECK & AUDIT',
       items: [
+        { label: 'AI compliance check', href: '/dashboard/compliance-check', icon: 'sparkle' },
+        { label: 'Gap assessment', href: '/dashboard/gap-assessment', icon: 'shield' },
+        { label: 'Internal audits', href: '/dashboard/audits', icon: 'shield' },
+        { label: 'Management review', href: '/dashboard/management-review', icon: 'shield' },
         { label: 'Reports', href: '/dashboard/reports', icon: 'chart' },
+      ],
+    },
+    {
+      title: 'IMPROVE',
+      items: [
+        { label: 'CAPA', href: '/dashboard/capa', icon: 'shield', badgeCount: openCapaCount },
+        { label: 'Improvement actions', href: '/dashboard/reports', icon: 'chart' },
         { label: 'Consultant review', href: '/dashboard/consultant-review', icon: 'chart' },
+        { label: 'Choose auditor', href: '/dashboard/choose-auditor', icon: 'shield' },
       ],
     },
     {
@@ -171,55 +184,95 @@ export default function Sidebar({
   ]
 
   return (
-    <aside className="fixed inset-y-0 left-0 w-48 bg-white border-r border-gray-200 flex flex-col">
-      <div className="px-4 py-4 border-b border-gray-200">
-        <h1 className="text-base font-bold text-gray-900 tracking-tight">Lemma IMS</h1>
-        <p className="text-[10px] text-gray-500 mt-0.5">AI-assisted ISO compliance</p>
-      </div>
+    <>
+      <button
+        type="button"
+        aria-label="Open menu"
+        onClick={() => setMobileOpen(true)}
+        className="lg:hidden fixed top-3 left-3 z-40 w-9 h-9 rounded-lg flex items-center justify-center"
+        style={{ background: 'var(--lemma-surface)', border: '1px solid var(--lemma-line)' }}
+      >
+        <span style={{ color: 'var(--lemma-ink)', fontSize: 18 }}>☰</span>
+      </button>
+
+      {mobileOpen && (
+        <div
+          className="lg:hidden fixed inset-0 z-40"
+          style={{ background: 'rgba(28,36,52,0.4)' }}
+          onClick={() => setMobileOpen(false)}
+        />
+      )}
+
+      <aside
+        className={`fixed inset-y-0 left-0 w-60 lg:w-48 flex flex-col z-50 transition-transform duration-200 ${
+          mobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
+        }`}
+        style={{ background: 'var(--lemma-surface)', borderRight: '1px solid var(--lemma-line)' }}
+      >
+        <div className="px-4 py-4 flex items-center justify-between" style={{ borderBottom: '1px solid var(--lemma-line)' }}>
+          <div>
+            <h1 className="text-base font-bold tracking-tight" style={{ color: 'var(--lemma-ink)' }}>
+              Lemma IMS
+            </h1>
+            <p className="text-[10px] mt-0.5" style={{ color: 'var(--lemma-mist)' }}>
+              AI-assisted ISO compliance
+            </p>
+          </div>
+          <button
+            type="button"
+            aria-label="Close menu"
+            onClick={() => setMobileOpen(false)}
+            className="lg:hidden"
+            style={{ color: 'var(--lemma-mist)', fontSize: 20 }}
+          >
+            ×
+          </button>
+        </div>
 
       <nav className="flex-1 overflow-y-auto px-2 py-3 text-xs">
         {sections.map((section, idx) => (
           <div key={idx} className="mb-3">
             {section.title && (
-              <div className="px-2 mb-1 text-[10px] font-semibold tracking-wider text-gray-400">
+              <div className="px-2 mb-1 text-[10px] font-semibold tracking-wider" style={{ color: 'var(--lemma-mist)' }}>
                 {section.title}
               </div>
             )}
             {section.items.map((item) => {
               const active = pathname === item.href
               return (
-                <div key={item.href}>
+                <div key={item.href + item.label}>
                   <Link
                     href={item.href}
-                    className={`flex items-center justify-between gap-2 px-2 py-1.5 rounded-md ${
+                    className="flex items-center justify-between gap-2 px-2 py-1.5 rounded-md"
+                    style={
                       active
-                        ? 'bg-blue-50 text-blue-700 font-medium'
-                        : 'text-gray-700 hover:bg-gray-50'
-                    }`}
+                        ? { background: 'var(--lemma-primary-soft)', color: 'var(--lemma-primary)', fontWeight: 500 }
+                        : { color: 'var(--lemma-slate)' }
+                    }
                   >
                     <span className="flex items-center gap-2 min-w-0">
                       {item.icon && <Icon name={item.icon} />}
                       <span className="truncate">{item.label}</span>
                     </span>
                     {item.badgeCount !== undefined && item.badgeCount > 0 && (
-                      <span className="text-[10px] font-semibold bg-red-100 text-red-700 px-1.5 py-0.5 rounded">
+                      <span
+                        className="text-[10px] font-semibold px-1.5 py-0.5 rounded"
+                        style={{ background: 'var(--lemma-danger-soft)', color: 'var(--lemma-danger)' }}
+                      >
                         {item.badgeCount}
                       </span>
                     )}
                   </Link>
                   {item.substeps && (
-                    <div className="ml-5 mt-0.5 mb-1 border-l border-gray-200 pl-2 space-y-0.5">
+                    <div className="ml-5 mt-0.5 mb-1 pl-2 space-y-0.5" style={{ borderLeft: '1px solid var(--lemma-line)' }}>
                       {item.substeps.map((s) => {
                         const sActive = pathname === s.href
                         return (
                           <Link
                             key={s.href}
                             href={s.href}
-                            className={`block px-2 py-1 rounded text-[11px] ${
-                              sActive
-                                ? 'text-blue-700 font-medium'
-                                : 'text-gray-500 hover:text-gray-900'
-                            }`}
+                            className="block px-2 py-1 rounded text-[11px]"
+                            style={sActive ? { color: 'var(--lemma-primary)', fontWeight: 500 } : { color: 'var(--lemma-mist)' }}
                           >
                             {s.label}
                           </Link>
@@ -234,23 +287,25 @@ export default function Sidebar({
         ))}
       </nav>
 
-      <div className="px-3 py-3 border-t border-gray-200">
+      <div className="px-3 py-3" style={{ borderTop: '1px solid var(--lemma-line)' }}>
         <button
           type="button"
-          className="w-full text-left bg-gradient-to-br from-violet-50 to-blue-50 border border-violet-200 rounded-md px-3 py-2.5 hover:from-violet-100 hover:to-blue-100 transition"
+          className="w-full text-left rounded-lg px-3 py-2.5 transition"
+          style={{ background: 'var(--lemma-primary-soft)', border: '1px solid var(--lemma-primary)' }}
         >
-          <div className="flex items-center gap-1.5 text-violet-700">
+          <div className="flex items-center gap-1.5" style={{ color: 'var(--lemma-primary)' }}>
             <Icon name="sparkle" />
             <span className="text-xs font-semibold">Ask Lemma AI</span>
           </div>
-          <p className="text-[10px] text-gray-600 mt-0.5">Get instant answers</p>
+          <p className="text-[10px] mt-0.5" style={{ color: 'var(--lemma-slate)' }}>Get instant answers</p>
         </button>
       </div>
 
-      <div className="px-3 py-3 border-t border-gray-200">
-        <div className="text-xs font-medium text-gray-900 truncate">{userName}</div>
-        <div className="text-[10px] text-gray-500 capitalize">{userRole}</div>
+      <div className="px-3 py-3" style={{ borderTop: '1px solid var(--lemma-line)' }}>
+        <div className="text-xs font-medium truncate" style={{ color: 'var(--lemma-ink)' }}>{userName}</div>
+        <div className="text-[10px] capitalize" style={{ color: 'var(--lemma-mist)' }}>{userRole}</div>
       </div>
     </aside>
+    </>
   )
 }

@@ -428,19 +428,58 @@ function RightPanel({ company, documentType, qualityIssues, savedDocId, savedCod
         </div>
       </div>
 
-      <div className="bg-white border border-gray-200 rounded-lg p-4">
-        <h2 className="text-sm font-semibold text-gray-900 mb-3">AI quality check</h2>
+      <div className="lemma-card p-4">
+        <div className="flex items-center gap-2 mb-3">
+          <span
+            className="w-5 h-5 rounded-md flex items-center justify-center text-[11px] font-bold"
+            style={{ background: 'var(--lemma-primary)', color: '#fff' }}
+          >
+            AI
+          </span>
+          <h2 className="text-sm font-semibold" style={{ color: 'var(--lemma-ink)' }}>
+            Missing information check
+          </h2>
+        </div>
         {qualityIssues.length === 0 ? (
-          <p className="text-xs text-emerald-700">✓ No issues detected.</p>
+          <div
+            className="flex items-center gap-2 rounded-lg px-3 py-2.5"
+            style={{ background: 'var(--lemma-ok-soft)', border: '1px solid var(--lemma-ok)' }}
+          >
+            <span className="text-sm font-bold" style={{ color: 'var(--lemma-ok)' }}>✓</span>
+            <span className="text-xs" style={{ color: 'var(--lemma-ok)' }}>
+              Ready for review — no missing information detected.
+            </span>
+          </div>
         ) : (
-          <ul className="space-y-1.5">
+          <div className="space-y-2">
+            <div
+              className="text-[11px] font-semibold uppercase tracking-wide px-2 py-1 rounded inline-block"
+              style={{ background: 'var(--lemma-check-soft)', color: 'var(--lemma-check)' }}
+            >
+              {qualityIssues.length} item{qualityIssues.length === 1 ? '' : 's'} need your input
+            </div>
             {qualityIssues.map((issue, i) => (
-              <li key={i} className="text-xs text-amber-700 flex gap-1.5">
-                <span className="flex-shrink-0">!</span>
-                <span>{issue}</span>
-              </li>
+              <div
+                key={i}
+                className="flex gap-2.5 rounded-lg px-3 py-2"
+                style={{ background: 'var(--lemma-check-soft)', border: '1px solid var(--lemma-check)' }}
+              >
+                <span
+                  className="w-5 h-5 rounded-md flex items-center justify-center text-[12px] font-bold shrink-0"
+                  style={{ background: 'var(--lemma-check)', color: '#fff' }}
+                >
+                  !
+                </span>
+                <span className="text-xs leading-snug" style={{ color: 'var(--lemma-ink)' }}>
+                  {issue}
+                </span>
+              </div>
             ))}
-          </ul>
+            <p className="text-[10px] pt-1" style={{ color: 'var(--lemma-mist)' }}>
+              The AI writes only from your provided information — it never invents
+              facts. Fill these in, then re-check.
+            </p>
+          </div>
         )}
       </div>
 

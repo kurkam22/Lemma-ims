@@ -25,3 +25,35 @@ body {
     text-wrap: balance;
   }
 }
+
+/* ===== Lemma IMS design system ===== */
+:root {
+  --lemma-ink: #1c2434;
+  --lemma-slate: #5a6478;
+  --lemma-mist: #8a93a6;
+  --lemma-line: #e4e8f0;
+  --lemma-surface: #ffffff;
+  --lemma-canvas: #f5f7fb;
+  --lemma-primary: #2f5fa6;
+  --lemma-primary-soft: #eaf1fb;
+  --lemma-plan: #2f5fa6;
+  --lemma-plan-soft: #eaf1fb;
+  --lemma-do: #1d8a6e;
+  --lemma-do-soft: #e4f4ef;
+  --lemma-check: #b9821f;
+  --lemma-check-soft: #faf0db;
+  --lemma-act: #6a55b0;
+  --lemma-act-soft: #eeeafa;
+  --lemma-danger: #b3402f;
+  --lemma-danger-soft: #fbeae7;
+  --lemma-ok: #1d8a6e;
+  --lemma-ok-soft: #e4f4ef;
+  --lemma-radius: 14px;
+  --lemma-radius-sm: 10px;
+}
+.lemma-card {
+  background: var(--lemma-surface);
+  border: 1px solid var(--lemma-line);
+  border-radius: var(--lemma-radius);
+}
+.lemma-canvas { background: var(--lemma-canvas); }

@@ -3,6 +3,15 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
+import CertificationJourney from '@/app/dashboard/_components/certification-journey'
+import ComplianceChain from '@/app/dashboard/_components/compliance-chain'
+import AiInsights from '@/app/dashboard/_components/ai-insights'
+import {
+  DEMO_COMPANY,
+  DEMO_JOURNEY,
+  DEMO_CHAIN,
+  DEMO_AI_INSIGHTS,
+} from '@/lib/demo-data'
 
 const SETUP_TOTAL_STEPS = 5
 
@@ -174,42 +183,122 @@ export default function DashboardPage() {
   const firstName = data.userName.split(' ')[0]
   const setupComplete = data.setupStep >= SETUP_TOTAL_STEPS
 
+  const usingDemo = data.readinessPct === 0 && data.documentsReady === 0
+  const view = usingDemo
+    ? {
+        readinessPct: DEMO_COMPANY.readinessPct,
+        documentsReady: DEMO_COMPANY.documentsReady,
+        evidenceConfirmed: DEMO_COMPANY.evidenceConfirmed,
+        openCapas: DEMO_COMPANY.openCapa,
+        nextLabel: DEMO_COMPANY.nextActionLabel,
+        nextDue: DEMO_COMPANY.nextActionDue,
+        stage: DEMO_COMPANY.currentStage as 'plan' | 'do' | 'check' | 'act',
+      }
+    : {
+        readinessPct: data.readinessPct,
+        documentsReady: data.documentsReady,
+        evidenceConfirmed: data.evidenceConfirmed,
+        openCapas: data.openCapas,
+        nextLabel: data.nextAction?.label ?? '—',
+        nextDue: data.nextAction?.due ?? null,
+        stage: (!setupComplete
+          ? 'plan'
+          : data.documentsReady === 0
+            ? 'do'
+            : data.readinessPct < 80
+              ? 'check'
+              : 'act') as 'plan' | 'do' | 'check' | 'act',
+      }
+
   return (
-    <div className="space-y-6 max-w-7xl">
-      <div>
-        <h1 className="text-2xl font-semibold text-gray-900">
-          Welcome back{firstName ? `, ${firstName}` : ''}
-        </h1>
-        <p className="text-sm text-gray-500 mt-1">
-          Here&apos;s where you stand on certification readiness.
-        </p>
+    <div className="space-y-5 max-w-7xl">
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-semibold" style={{ color: 'var(--lemma-ink)' }}>
+            ISO command centre
+          </h1>
+          <p className="text-sm mt-1" style={{ color: 'var(--lemma-slate)' }}>
+            {usingDemo ? DEMO_COMPANY.name : firstName ? `Welcome back, ${firstName}` : 'Welcome back'}
+            {' · '}
+            {usingDemo ? DEMO_COMPANY.standard : 'Your certification readiness'}
+          </p>
+        </div>
+        {usingDemo && (
+          <span
+            className="text-[11px] font-medium px-2.5 py-1 rounded-full"
+            style={{ background: 'var(--lemma-check-soft)', color: 'var(--lemma-check)' }}
+          >
+            Sample data — start setup to see your own
+          </span>
+        )}
       </div>
 
-      {!setupComplete && (
+      {!setupComplete && !usingDemo && (
         <SetupBanner step={data.setupStep} total={SETUP_TOTAL_STEPS} />
       )}
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-        <KPICard label="Overall readiness" value={`${data.readinessPct}%`} accent="blue" />
-        <KPICard label="Documents ready" value={data.documentsReady.toString()} accent="indigo" />
-        <KPICard
-          label="Evidence confirmed"
-          value={data.evidenceConfirmed.toString()}
-          accent="emerald"
-        />
-        <KPICard label="Open CAPA" value={data.openCapas.toString()} accent="red" />
-        <KPICard
+      <CertificationJourney stages={DEMO_JOURNEY} activeStage={view.stage} />
+
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
+        <StatCard label="Overall readiness" value={`${view.readinessPct}%`} tone="primary" />
+        <StatCard label="Documents ready" value={view.documentsReady.toString()} tone="do" />
+        <StatCard label="Evidence confirmed" value={view.evidenceConfirmed.toString()} tone="do" />
+        <StatCard label="Open CAPA" value={view.openCapas.toString()} tone="danger" />
+        <StatCard
           label="Next action due"
-          value={data.nextAction?.due ? formatDate(data.nextAction.due) : '—'}
-          sublabel={data.nextAction?.label}
-          accent="amber"
+          value={view.nextDue ? formatDate(view.nextDue) : '—'}
+          sublabel={view.nextLabel}
+          tone="check"
         />
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <ComplianceChain rows={DEMO_CHAIN} />
+
+      <AiInsights insights={DEMO_AI_INSIGHTS} />
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
         <PrioritiesPanel items={data.priorities} />
         <ReadinessByAreaPanel items={data.readinessByArea} />
       </div>
+
+      <p className="text-[11px] leading-relaxed px-1" style={{ color: 'var(--lemma-mist)' }}>
+        AI outputs are based on company-provided information and require human review.
+        Lemma IMS is not a certification body and does not guarantee certification.
+      </p>
+    </div>
+  )
+}
+
+function StatCard({
+  label,
+  value,
+  sublabel,
+  tone,
+}: {
+  label: string
+  value: string
+  sublabel?: string
+  tone: 'primary' | 'do' | 'check' | 'danger'
+}) {
+  const colorMap = {
+    primary: 'var(--lemma-primary)',
+    do: 'var(--lemma-do)',
+    check: 'var(--lemma-check)',
+    danger: 'var(--lemma-danger)',
+  } as const
+  return (
+    <div className="lemma-card p-3.5">
+      <div className="text-[11px] font-medium uppercase tracking-wide" style={{ color: 'var(--lemma-mist)' }}>
+        {label}
+      </div>
+      <div className="text-2xl font-semibold mt-1" style={{ color: colorMap[tone] }}>
+        {value}
+      </div>
+      {sublabel && (
+        <div className="text-[11px] mt-0.5 truncate" style={{ color: 'var(--lemma-slate)' }}>
+          {sublabel}
+        </div>
+      )}
     </div>
   )
 }
@@ -253,10 +342,11 @@ function SetupBanner({ step, total }: { step: number; total: number }) {
     <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-4 flex flex-wrap items-center justify-between gap-4">
       <div>
         <div className="text-sm font-semibold text-blue-900">
-          Finish setting up your account
+          Complete company setup
         </div>
         <div className="text-xs text-blue-700 mt-0.5">
-          Step {step} of {total} — complete setup to unlock all features.
+          Step {step} of {total} — answer company questions to calculate your ISO
+          readiness.
         </div>
       </div>
       <div className="flex items-center gap-3">

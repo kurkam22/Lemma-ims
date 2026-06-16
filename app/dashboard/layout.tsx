@@ -43,15 +43,15 @@ export default async function DashboardLayout({
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen" style={{ background: 'var(--lemma-canvas)' }}>
       <Sidebar
         userName={userRow?.full_name || user.email || 'User'}
         userRole={userRow?.role ?? 'member'}
         openCapaCount={openCapaCount}
       />
-      <div className="pl-48">
+      <div className="pl-0 lg:pl-48">
         <TopBar companyName={companyName} />
-        <main className="p-6">{children}</main>
+        <main className="p-4 lg:p-6 pt-16 lg:pt-6">{children}</main>
       </div>
     </div>
   )
