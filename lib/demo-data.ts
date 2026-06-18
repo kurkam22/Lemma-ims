@@ -103,6 +103,23 @@ export const DEMO_CHAIN: ComplianceChainRow[] = [
   },
 ]
 
+export const DEMO_READINESS_BY_AREA: { area: string; pct: number }[] = [
+  { area: 'Context & Leadership', pct: 78 },
+  { area: 'Planning', pct: 60 },
+  { area: 'Support', pct: 65 },
+  { area: 'Operation', pct: 55 },
+  { area: 'Performance evaluation', pct: 48 },
+  { area: 'Improvement', pct: 40 },
+]
+
+export const DEMO_PRIORITIES = [
+  { id: 'p1', title: 'Upload training records (clause 7.2)', due: '2026-06-22', severity: 'high' as const },
+  { id: 'p2', title: 'Add measurable KPIs to quality objectives (6.2)', severity: 'medium' as const },
+  { id: 'p3', title: 'Record supplier evaluation (8.4)', severity: 'medium' as const },
+  { id: 'p4', title: 'Schedule first internal audit (9.2)', severity: 'low' as const },
+  { id: 'p5', title: 'Close overdue CAPA: customer complaint', severity: 'high' as const },
+]
+
 export type AiInsight = {
   title: string
   detail: string

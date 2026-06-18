@@ -11,6 +11,8 @@ import {
   DEMO_JOURNEY,
   DEMO_CHAIN,
   DEMO_AI_INSIGHTS,
+  DEMO_READINESS_BY_AREA,
+  DEMO_PRIORITIES,
 } from '@/lib/demo-data'
 
 const SETUP_TOTAL_STEPS = 5
@@ -257,8 +259,8 @@ export default function DashboardPage() {
       <AiInsights insights={DEMO_AI_INSIGHTS} />
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-        <PrioritiesPanel items={data.priorities} />
-        <ReadinessByAreaPanel items={data.readinessByArea} />
+        <PrioritiesPanel items={usingDemo ? DEMO_PRIORITIES : data.priorities} />
+        <ReadinessByAreaPanel items={usingDemo ? DEMO_READINESS_BY_AREA : data.readinessByArea} />
       </div>
 
       <p className="text-[11px] leading-relaxed px-1" style={{ color: 'var(--lemma-mist)' }}>
