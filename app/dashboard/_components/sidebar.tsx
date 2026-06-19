@@ -135,8 +135,9 @@ export default function Sidebar({
     {
       title: 'STANDARDS & REQUIREMENTS',
       items: [
-        { label: 'Standards library', href: '/dashboard/standards', icon: 'layers' },
-        { label: 'Clause requirements', href: '/dashboard/standards-catalogue', icon: 'layers' },
+        { label: 'Requirements explained', href: '/dashboard/standards', icon: 'layers' },
+        { label: 'Recommended standards', href: '/dashboard/standards-catalogue', icon: 'layers' },
+        { label: 'My selected standards', href: '/dashboard/standards-catalogue', icon: 'layers' },
         { label: 'Process map', href: '/dashboard/processes', icon: 'layers' },
       ],
     },
@@ -144,37 +145,38 @@ export default function Sidebar({
       title: 'DOCUMENTS',
       items: [
         { label: 'Required documents', href: '/dashboard/required-documents', icon: 'sparkle' },
-        { label: 'AI document generator', href: '/dashboard/documents/generator', icon: 'file' },
+        { label: 'Create with AI', href: '/dashboard/documents/generator', icon: 'file' },
         { label: 'Document centre', href: '/dashboard/documents/centre', icon: 'file' },
-        { label: 'Export centre', href: '/dashboard/documents/export', icon: 'file' },
+        { label: 'Export package', href: '/dashboard/documents/export', icon: 'file' },
       ],
     },
     {
       title: 'IMPLEMENTATION',
       items: [
-        { label: 'Evidence', href: '/dashboard/evidence', icon: 'shield' },
+        { label: 'Records & evidence', href: '/dashboard/evidence', icon: 'shield' },
         { label: 'Training', href: '/dashboard/training', icon: 'shield' },
-        { label: 'Suppliers', href: '/dashboard/suppliers', icon: 'shield' },
+        { label: 'Suppliers & contractors', href: '/dashboard/suppliers', icon: 'shield' },
         { label: 'Risks & opportunities', href: '/dashboard/risk', icon: 'shield' },
       ],
     },
     {
       title: 'CHECK & AUDIT',
       items: [
-        { label: 'AI compliance check', href: '/dashboard/compliance-check', icon: 'sparkle' },
+        { label: 'AI readiness check', href: '/dashboard/compliance-check', icon: 'sparkle' },
         { label: 'Gap assessment', href: '/dashboard/gap-assessment', icon: 'shield' },
         { label: 'Internal audits', href: '/dashboard/audits', icon: 'shield' },
         { label: 'Management review', href: '/dashboard/management-review', icon: 'shield' },
         { label: 'Reports', href: '/dashboard/reports', icon: 'chart' },
+        { label: 'Audit & certification guide', href: '/dashboard/choose-auditor', icon: 'shield' },
       ],
     },
     {
       title: 'IMPROVE',
       items: [
-        { label: 'CAPA', href: '/dashboard/capa', icon: 'shield', badgeCount: openCapaCount },
+        { label: 'Issues & nonconformities', href: '/dashboard/capa', icon: 'shield', badgeCount: openCapaCount },
+        { label: 'Corrective actions', href: '/dashboard/capa', icon: 'shield' },
         { label: 'Improvement actions', href: '/dashboard/reports', icon: 'chart' },
         { label: 'Consultant review', href: '/dashboard/consultant-review', icon: 'chart' },
-        { label: 'Choose auditor', href: '/dashboard/choose-auditor', icon: 'shield' },
       ],
     },
     {

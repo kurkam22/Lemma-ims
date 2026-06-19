@@ -100,9 +100,10 @@ export default function StandardsPage() {
   return (
     <div className="space-y-6 max-w-6xl">
       <div>
-        <h1 className="text-2xl font-semibold text-gray-900">Standards library</h1>
+        <h1 className="text-2xl font-semibold text-gray-900">Requirements explained</h1>
         <p className="text-sm text-gray-500 mt-1">
-          Browse ISO requirements, see where you stand, and jump straight to the work.
+          Each ISO requirement in plain language, with the documents you need for it.
+          Explanations are written in our own words — official ISO text is not reproduced.
         </p>
       </div>
 
