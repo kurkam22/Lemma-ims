@@ -5,6 +5,8 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import CertificationJourney from '@/app/dashboard/_components/certification-journey'
 import ComplianceChain from '@/app/dashboard/_components/compliance-chain'
+import ComplianceMetro from '@/app/dashboard/_components/compliance-metro'
+import { DEMO_METRO } from '@/lib/metro-data'
 import AiInsights from '@/app/dashboard/_components/ai-insights'
 import {
   DEMO_COMPANY,
@@ -256,7 +258,14 @@ export default function DashboardPage() {
 
       <ComplianceChain rows={DEMO_CHAIN} />
 
+      <ComplianceMetro clauses={DEMO_METRO} />
+
       <AiInsights insights={DEMO_AI_INSIGHTS} />
+
+      <DoThisNow
+        priority={usingDemo ? DEMO_PRIORITIES[0] : data.priorities[0]}
+        fallbackHref={setupComplete ? '/dashboard/compliance-check' : '/dashboard/setup'}
+      />
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
         <PrioritiesPanel items={usingDemo ? DEMO_PRIORITIES : data.priorities} />
@@ -363,6 +372,50 @@ function SetupBanner({ step, total }: { step: number; total: number }) {
         </Link>
       </div>
     </div>
+  )
+}
+
+function routeForPriority(title: string): string {
+  const t = title.toLowerCase()
+  if (t.includes('training') || t.includes('competence')) return '/dashboard/training'
+  if (t.includes('supplier')) return '/dashboard/suppliers'
+  if (t.includes('audit')) return '/dashboard/audits'
+  if (t.includes('capa') || t.includes('complaint') || t.includes('nonconform'))
+    return '/dashboard/capa'
+  if (t.includes('objective') || t.includes('kpi') || t.includes('goal'))
+    return '/dashboard/setup/step4'
+  if (t.includes('risk')) return '/dashboard/risk'
+  if (t.includes('evidence') || t.includes('record')) return '/dashboard/evidence'
+  if (t.includes('document') || t.includes('polic') || t.includes('procedure'))
+    return '/dashboard/required-documents'
+  if (t.includes('review')) return '/dashboard/management-review'
+  return '/dashboard/compliance-check'
+}
+
+function DoThisNow({
+  priority,
+  fallbackHref,
+}: {
+  priority?: Priority
+  fallbackHref: string
+}) {
+  const label = priority ? priority.title : 'Run your readiness check'
+  const href = priority ? routeForPriority(priority.title) : fallbackHref
+  return (
+    <Link
+      href={href}
+      className="flex items-center justify-between gap-4 bg-blue-600 hover:bg-blue-700 transition rounded-xl px-5 py-4 text-white shadow-sm"
+    >
+      <div className="min-w-0">
+        <div className="text-[11px] font-semibold uppercase tracking-wide text-blue-100">
+          Do this now
+        </div>
+        <div className="text-sm sm:text-base font-medium truncate">{label}</div>
+      </div>
+      <span className="shrink-0 text-xl leading-none" aria-hidden>
+        →
+      </span>
+    </Link>
   )
 }
 

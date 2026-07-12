@@ -109,7 +109,7 @@ Approved supplier list:
 `
 
 export async function POST(req: Request) {
-  let body: { documentType?: string; companyId?: string }
+  let body: { documentType?: string; companyId?: string; answers?: Record<string, string> }
   try {
     body = await req.json()
   } catch {
@@ -120,6 +120,19 @@ export async function POST(req: Request) {
   }
 
   const { documentType, companyId } = body
+
+  // Questionnaire answers: optional, size-capped, strings only.
+  const rawAnswers = body.answers && typeof body.answers === 'object' ? body.answers : {}
+  const answers: Record<string, string> = {}
+  let totalChars = 0
+  for (const [k, v] of Object.entries(rawAnswers).slice(0, 30)) {
+    if (typeof v !== 'string') continue
+    const clean = v.trim().slice(0, 600)
+    if (!clean) continue
+    totalChars += clean.length
+    if (totalChars > 6000) break
+    answers[k.slice(0, 60)] = clean
+  }
   if (!documentType || !companyId) {
     return new Response(
       JSON.stringify({ error: 'documentType and companyId are required' }),
@@ -180,6 +193,16 @@ ${JSON.stringify(
     null,
     2
   )}
+
+Client questionnaire answers for this document (AUTHORITATIVE — build the document around these; do not contradict or embellish them; any needed detail not covered here or in company data must be [TO CONFIRM]):
+${
+    Object.keys(answers).length > 0
+      ? JSON.stringify(answers, null, 2)
+      : '(none provided — use company data only; mark unknown specifics as [TO CONFIRM])'
+  }
+
+End the document with a one-line document-control footer in this exact format:
+"Standard reference: <standard and edition> · clauses <relevant clause numbers> · Generated: <date> · Status: DRAFT — requires human review"
 
 Generate the document now.`
 

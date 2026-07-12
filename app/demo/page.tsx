@@ -1,6 +1,8 @@
 import Link from 'next/link'
 import CertificationJourney from '@/app/dashboard/_components/certification-journey'
 import ComplianceChain from '@/app/dashboard/_components/compliance-chain'
+import ComplianceMetro from '@/app/dashboard/_components/compliance-metro'
+import { DEMO_METRO } from '@/lib/metro-data'
 import AiInsights from '@/app/dashboard/_components/ai-insights'
 import {
   DEMO_COMPANY,
@@ -105,6 +107,8 @@ export default function PublicDemoPage() {
         </div>
 
         <ComplianceChain rows={DEMO_CHAIN} />
+
+        <ComplianceMetro clauses={DEMO_METRO} />
 
         <AiInsights insights={DEMO_AI_INSIGHTS} />
 

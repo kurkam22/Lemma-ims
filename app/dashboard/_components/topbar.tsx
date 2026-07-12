@@ -4,10 +4,7 @@ import { useState, useRef, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 
-type Lang = 'EN' | 'RU' | 'UZ'
-
 export default function TopBar({ companyName }: { companyName: string | null }) {
-  const [lang, setLang] = useState<Lang>('EN')
   const [menuOpen, setMenuOpen] = useState(false)
   const [signingOut, setSigningOut] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
@@ -99,22 +96,7 @@ export default function TopBar({ companyName }: { companyName: string | null }) 
           </svg>
         </button>
 
-        <div className="flex bg-gray-100 rounded-md p-0.5">
-          {(['EN', 'RU', 'UZ'] as const).map((l) => (
-            <button
-              key={l}
-              type="button"
-              onClick={() => setLang(l)}
-              className={`px-2 py-0.5 text-[10px] font-semibold rounded transition ${
-                lang === l
-                  ? 'bg-white text-gray-900 shadow-sm'
-                  : 'text-gray-500 hover:text-gray-900'
-              }`}
-            >
-              {l}
-            </button>
-          ))}
-        </div>
+        {/* Language switcher removed until real translations are wired (i18n phase). */}
 
         <div className="relative" ref={menuRef}>
           <button

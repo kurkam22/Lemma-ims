@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import EmptyState from '@/app/dashboard/_components/empty-state'
 
 const EVIDENCE_TYPES = [
   'Policy',
@@ -278,12 +279,11 @@ export default function EvidencePage() {
       </div>
 
       {rows.length === 0 ? (
-        <div className="bg-white border border-gray-200 rounded-lg p-12 text-center">
-          <p className="text-sm text-gray-500">No evidence uploaded yet.</p>
-          <p className="text-xs text-gray-400 mt-1">
-            Click Upload to add your first file.
-          </p>
-        </div>
+        <EmptyState
+          title="No evidence yet — and evidence is what auditors ask for"
+          why="Documents say what you do; evidence proves you actually do it: training records, inspection logs, meeting minutes, photos. Every uploaded file is classified to the right ISO clause automatically."
+          hint="Use the Upload button above — a good first file is your latest training record or an inspection log."
+        />
       ) : (
         <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
           <table className="w-full text-sm">

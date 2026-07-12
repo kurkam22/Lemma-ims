@@ -157,6 +157,7 @@ export default function Sidebar({
         { label: 'Training', href: '/dashboard/training', icon: 'shield' },
         { label: 'Suppliers & contractors', href: '/dashboard/suppliers', icon: 'shield' },
         { label: 'Risks & opportunities', href: '/dashboard/risk', icon: 'shield' },
+        { label: 'Reminders & deadlines', href: '/dashboard/reminders', icon: 'shield' },
       ],
     },
     {

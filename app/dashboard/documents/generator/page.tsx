@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { QUESTIONNAIRES, MAX_ANSWER_CHARS } from '@/lib/questionnaires'
+import { snapshotVersion, logEvent } from '@/lib/document-control'
 
 const DOCUMENT_TYPES = [
   'IMS Policy',
@@ -68,6 +70,7 @@ type Company = Record<string, unknown> & { id: string; name: string; document_co
 
 export default function GeneratorPage() {
   const [documentType, setDocumentType] = useState<DocType>('IMS Policy')
+  const [answers, setAnswers] = useState<Record<string, string>>({})
   const [text, setText] = useState('')
   const [streaming, setStreaming] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -107,10 +110,16 @@ export default function GeneratorPage() {
     setStreaming(true)
 
     try {
+      const filledAnswers = Object.fromEntries(
+        Object.entries(answers)
+          .map(([k, v]) => [k, v.trim().slice(0, MAX_ANSWER_CHARS)])
+          .filter(([, v]) => v !== '')
+      )
+
       const res = await fetch('/api/documents/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ documentType, companyId }),
+        body: JSON.stringify({ documentType, companyId, answers: filledAnswers }),
       })
 
       if (!res.ok) {
@@ -175,6 +184,11 @@ export default function GeneratorPage() {
           status: asOfficial ? 'approved' : 'draft',
         })
         .eq('id', savedDocId)
+      if (!e) {
+        const v = await snapshotVersion(supabase, { companyId, documentId: savedDocId, content: text, note: asOfficial ? 'Saved as official' : 'Draft update' })
+        if (v) await supabase.from('documents').update({ version: `${v}.0` }).eq('id', savedDocId)
+        await logEvent(supabase, { companyId, documentId: savedDocId, action: asOfficial ? 'approved' : 'edited' })
+      }
       setSaving(false)
       if (e) { setError(e.message); return }
       setNotice(asOfficial ? `Saved as official (${code}).` : `Draft updated (${code}).`)
@@ -199,6 +213,9 @@ export default function GeneratorPage() {
     setSaving(false)
     if (e) { setError(e.message); return }
     if (data) {
+      await snapshotVersion(supabase, { companyId, documentId: data.id, content: text, note: 'Initial version (AI draft)' })
+      await logEvent(supabase, { companyId, documentId: data.id, action: 'created', detail: `AI-generated ${documentType}` })
+      if (asOfficial) await logEvent(supabase, { companyId, documentId: data.id, action: 'approved' })
       setSavedDocId(data.id)
       setSavedCode(data.document_code)
       setNotice(asOfficial ? `Saved as official (${data.document_code}).` : `Draft saved (${data.document_code}).`)
@@ -248,7 +265,9 @@ export default function GeneratorPage() {
         <LeftPanel sections={sectionStatuses} completePct={completePct} />
         <CenterPanel
           documentType={documentType}
-          setDocumentType={(t) => { setDocumentType(t); setText(''); setSavedDocId(null); setSavedCode(null); setNotice(null) }}
+          setDocumentType={(t) => { setDocumentType(t); setAnswers({}); setText(''); setSavedDocId(null); setSavedCode(null); setNotice(null) }}
+          answers={answers}
+          setAnswer={(id, v) => setAnswers((a) => ({ ...a, [id]: v }))}
           text={text}
           setText={setText}
           streaming={streaming}
@@ -303,11 +322,13 @@ function LeftPanel({ sections, completePct }: { sections: { name: string; status
 }
 
 function CenterPanel({
-  documentType, setDocumentType, text, setText, streaming, saving,
+  documentType, setDocumentType, answers, setAnswer, text, setText, streaming, saving,
   onGenerate, onSaveDraft, onConfirmOfficial, onExportWord, onPrint, savedCode,
 }: {
   documentType: DocType
   setDocumentType: (t: DocType) => void
+  answers: Record<string, string>
+  setAnswer: (id: string, v: string) => void
   text: string
   setText: (t: string) => void
   streaming: boolean
@@ -319,6 +340,8 @@ function CenterPanel({
   onPrint: () => void
   savedCode: string | null
 }) {
+  const questions = QUESTIONNAIRES[documentType] ?? []
+  const answeredCount = questions.filter((q) => (answers[q.id] ?? '').trim() !== '').length
   return (
     <div className="bg-white border border-gray-200 rounded-lg overflow-hidden flex flex-col">
       <div className="px-4 py-3 border-b border-gray-200 flex flex-wrap gap-2 items-center">
@@ -344,6 +367,48 @@ function CenterPanel({
           </span>
         )}
       </div>
+
+      {questions.length > 0 && !streaming && text === '' && (
+        <div className="px-4 py-3 border-b border-gray-200 bg-gray-50/60">
+          <div className="flex items-center justify-between mb-2">
+            <div className="text-xs font-semibold text-gray-700">
+              Answer a few questions so the draft is about <span className="text-blue-700">your</span> company
+            </div>
+            <div className="text-[10px] text-gray-400">
+              {answeredCount}/{questions.length} answered · skipped items become [TO CONFIRM]
+            </div>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {questions.map((q) => (
+              <div key={q.id} className={q.kind === 'textarea' ? 'md:col-span-2' : ''}>
+                <label htmlFor={`q-${q.id}`} className="block text-xs font-medium text-gray-700">
+                  {q.label}
+                </label>
+                {q.hint && <p className="text-[10px] text-gray-400 mt-0.5">{q.hint}</p>}
+                {q.kind === 'textarea' ? (
+                  <textarea
+                    id={`q-${q.id}`}
+                    rows={2}
+                    value={answers[q.id] ?? ''}
+                    onChange={(e) => setAnswer(q.id, e.target.value)}
+                    placeholder={q.placeholder}
+                    className="mt-1 w-full text-sm border border-gray-300 rounded-md px-3 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                ) : (
+                  <input
+                    id={`q-${q.id}`}
+                    type="text"
+                    value={answers[q.id] ?? ''}
+                    onChange={(e) => setAnswer(q.id, e.target.value)}
+                    placeholder={q.placeholder}
+                    className="mt-1 w-full text-sm border border-gray-300 rounded-md px-3 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       <textarea
         value={text}

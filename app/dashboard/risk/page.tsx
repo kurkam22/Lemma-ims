@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import EmptyState from '@/app/dashboard/_components/empty-state'
 
 type Kind = 'risk' | 'opportunity'
 
@@ -328,9 +329,11 @@ function RiskTable({
 }) {
   if (rows.length === 0) {
     return (
-      <div className="bg-white border border-gray-200 rounded-lg p-12 text-center">
-        <p className="text-sm text-gray-500">No entries yet for this view.</p>
-      </div>
+      <EmptyState
+        title="Nothing here yet"
+        why="ISO asks you to think ahead: what could go wrong in your work, and what opportunities are you missing (clause 6.1)? Listing 3–5 honest risks with simple ratings is enough to start."
+        hint="Use the Add button above — think per process: supply delays, machine breakdown, key person leaving."
+      />
     )
   }
   return (

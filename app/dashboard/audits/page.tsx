@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import EmptyState from '@/app/dashboard/_components/empty-state'
 import { ISO_9001_CLAUSES } from '@/lib/iso-clauses'
 
 type TabKey = 'programme' | 'plan' | 'checklists' | 'reports'
@@ -341,12 +342,11 @@ function Plan({
 }) {
   if (audits.length === 0) {
     return (
-      <div className="bg-white border border-gray-200 rounded-lg p-12 text-center">
-        <p className="text-sm text-gray-500">No audits scheduled yet.</p>
-        <p className="text-xs text-gray-400 mt-1">
-          Click "Create audit" to schedule your first one.
-        </p>
-      </div>
+      <EmptyState
+        title="No internal audits scheduled yet"
+        why="Before the certification body audits you, you audit yourself (clause 9.2). An internal audit finds the gaps while they are still cheap to fix — certifiers expect at least one completed before your certification audit."
+        hint='Use the "Create audit" button above — schedule your first one at least a month before the certification audit.'
+      />
     )
   }
   return (

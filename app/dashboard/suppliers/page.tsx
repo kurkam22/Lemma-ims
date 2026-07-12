@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import EmptyState from '@/app/dashboard/_components/empty-state'
 
 type Criticality = 'low' | 'medium' | 'high' | 'critical'
 type ApprovalStatus = 'pending' | 'approved' | 'rejected' | 'suspended'
@@ -349,9 +350,17 @@ export default function SuppliersPage() {
       </div>
 
       {filtered.length === 0 ? (
-        <div className="bg-white border border-gray-200 rounded-lg p-12 text-center">
-          <p className="text-sm text-gray-500">No suppliers match this filter.</p>
-        </div>
+        suppliers.length === 0 ? (
+          <EmptyState
+            title="No suppliers listed yet"
+            why="ISO expects you to control what you buy: choose suppliers on clear criteria and re-check them regularly (clause 8.4). Start by listing the suppliers your quality depends on most."
+            hint="Use the Add supplier button above — begin with your 3 most critical suppliers."
+          />
+        ) : (
+          <div className="bg-white border border-gray-200 rounded-lg p-12 text-center">
+            <p className="text-sm text-gray-500">No suppliers match this filter.</p>
+          </div>
+        )
       ) : (
         <div className="bg-white border border-gray-200 rounded-lg overflow-x-auto">
           <table className="w-full text-sm">

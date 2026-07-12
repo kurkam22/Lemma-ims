@@ -105,7 +105,7 @@ export default function Step5Page() {
       setSaving(false)
       return
     }
-    router.push('/dashboard')
+    router.push('/dashboard/required-documents?setup=complete')
   }
 
   if (loading || !metrics) {

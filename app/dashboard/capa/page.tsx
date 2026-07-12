@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import EmptyState from '@/app/dashboard/_components/empty-state'
 
 type CapaStatus = 'open' | 'in_progress' | 'verified' | 'closed'
 type FilterKey = 'all' | 'open' | 'in_progress' | 'overdue' | 'closed'
@@ -277,9 +278,17 @@ export default function CapaPage() {
       </div>
 
       {filtered.length === 0 ? (
-        <div className="bg-white border border-gray-200 rounded-lg p-12 text-center">
-          <p className="text-sm text-gray-500">No CAPAs match this filter.</p>
-        </div>
+        capas.length === 0 ? (
+          <EmptyState
+            title="No issues recorded — which auditors find suspicious, not impressive"
+            why="Every real company has problems; ISO checks that you catch them, find the root cause, and fix them so they stay fixed (clause 10.2). Recording issues honestly is a strength in an audit."
+            hint="Use the New button above — a customer complaint or a recent mistake is a perfect first entry."
+          />
+        ) : (
+          <div className="bg-white border border-gray-200 rounded-lg p-12 text-center">
+            <p className="text-sm text-gray-500">No CAPAs match this filter.</p>
+          </div>
+        )
       ) : (
         <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
           <table className="w-full text-sm">

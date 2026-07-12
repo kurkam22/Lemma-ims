@@ -2,6 +2,10 @@
 
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import {
+  snapshotVersion, logEvent, loadVersions, loadEvents,
+  EVENT_LABELS, type DocumentVersion, type DocumentEvent,
+} from '@/lib/document-control'
 import { ISO_9001_CLAUSES } from '@/lib/iso-clauses'
 
 type DocStatus = 'draft' | 'in_review' | 'approved' | 'obsolete'
@@ -111,6 +115,7 @@ export default function DocumentCentrePage() {
     return (
       <DocumentDetail
         doc={doc}
+        companyId={companyId}
         evidence={evidence}
         activeTab={tab}
         setTab={setTab}
@@ -220,8 +225,9 @@ function StatusBadge({ status }: { status: DocStatus }) {
   return <span className={`text-[10px] font-semibold px-2 py-0.5 rounded ${cls}`}>{label}</span>
 }
 
-function DocumentDetail({ doc, evidence, activeTab, setTab, onBack, onUpdate, onDelete, error }: {
+function DocumentDetail({ doc, companyId, evidence, activeTab, setTab, onBack, onUpdate, onDelete, error }: {
   doc: Document
+  companyId: string | null
   evidence: Evidence[]
   activeTab: DetailTab
   setTab: (t: DetailTab) => void
@@ -235,6 +241,44 @@ function DocumentDetail({ doc, evidence, activeTab, setTab, onBack, onUpdate, on
   const [code, setCode] = useState(doc.document_code ?? '')
   const [version, setVersion] = useState(doc.version)
   const [savingDoc, setSavingDoc] = useState(false)
+  const [versions, setVersions] = useState<DocumentVersion[]>([])
+  const [events, setEvents] = useState<DocumentEvent[]>([])
+  const [viewVersion, setViewVersion] = useState<DocumentVersion | null>(null)
+
+  const refreshControl = async () => {
+    const supabase = createClient()
+    const [v, e] = await Promise.all([loadVersions(supabase, doc.id), loadEvents(supabase, doc.id)])
+    setVersions(v)
+    setEvents(e)
+  }
+
+  useEffect(() => {
+    refreshControl()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [doc.id])
+
+  async function changeStatus(status: DocStatus, action: string) {
+    await onUpdate({ status })
+    if (companyId) {
+      const supabase = createClient()
+      await logEvent(supabase, { companyId, documentId: doc.id, action })
+      await refreshControl()
+    }
+  }
+
+  async function restoreVersion(v: DocumentVersion) {
+    if (!companyId) return
+    const supabase = createClient()
+    const n = await snapshotVersion(supabase, {
+      companyId, documentId: doc.id, content: v.content,
+      note: `Restored from v${v.version_no}`,
+    })
+    await onUpdate({ content: v.content, ...(n ? { version: `${n}.0` } : {}) })
+    await logEvent(supabase, { companyId, documentId: doc.id, action: 'version_restored', detail: `v${v.version_no}` })
+    setContent(v.content)
+    setViewVersion(null)
+    await refreshControl()
+  }
 
   useEffect(() => {
     setContent(doc.content ?? '')
@@ -245,8 +289,17 @@ function DocumentDetail({ doc, evidence, activeTab, setTab, onBack, onUpdate, on
 
   async function saveDocContent() {
     setSavingDoc(true)
-    await onUpdate({ content, title, document_code: code || null, version })
+    let newVersion = version
+    if (companyId && content !== (doc.content ?? '')) {
+      const supabase = createClient()
+      const n = await snapshotVersion(supabase, { companyId, documentId: doc.id, content, note: 'Manual edit' })
+      if (n) newVersion = `${n}.0`
+      await logEvent(supabase, { companyId, documentId: doc.id, action: 'edited' })
+    }
+    await onUpdate({ content, title, document_code: code || null, version: newVersion })
+    setVersion(newVersion)
     setSavingDoc(false)
+    await refreshControl()
   }
 
   const docClauses = guessClausesForDoc(doc)
@@ -376,16 +429,62 @@ function DocumentDetail({ doc, evidence, activeTab, setTab, onBack, onUpdate, on
 
       {activeTab === 'versions' && (
         <div className="bg-white border border-gray-200 rounded-lg p-5">
-          <p className="text-xs text-gray-500 mb-3">Version history.</p>
+          <p className="text-xs text-gray-500 mb-3">
+            Every save creates a snapshot. Auditors can see exactly how this document evolved.
+          </p>
           <div className="space-y-2">
-            <div className="flex items-center justify-between text-sm border border-gray-200 rounded-md px-3 py-2">
-              <div>
-                <span className="font-mono text-xs">v{doc.version}</span>
-                <span className="text-gray-500 ml-2">current</span>
+            {versions.length === 0 && (
+              <>
+                <div className="flex items-center justify-between text-sm border border-gray-200 rounded-md px-3 py-2">
+                  <div>
+                    <span className="font-mono text-xs">v{doc.version}</span>
+                    <span className="text-gray-500 ml-2">current</span>
+                  </div>
+                  <span className="text-xs text-gray-500">{new Date(doc.updated_at).toLocaleString()}</span>
+                </div>
+                <p className="text-[11px] text-gray-500 italic">
+                  No snapshots yet — they start with the next save. (If saves don&apos;t create
+                  snapshots, run migration_document_control.sql in Supabase.)
+                </p>
+              </>
+            )}
+            {versions.map((v, i) => (
+              <div key={v.id} className="border border-gray-200 rounded-md">
+                <div className="flex items-center justify-between text-sm px-3 py-2">
+                  <div className="min-w-0">
+                    <span className="font-mono text-xs">v{v.version_no}.0</span>
+                    {i === 0 && <span className="text-emerald-600 text-xs ml-2">current</span>}
+                    {v.note && <span className="text-gray-500 text-xs ml-2">· {v.note}</span>}
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <span className="text-xs text-gray-400">
+                      {v.created_by_email ?? ''} · {new Date(v.created_at).toLocaleString()}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setViewVersion(viewVersion?.id === v.id ? null : v)}
+                      className="text-xs font-medium text-blue-700 hover:underline"
+                    >
+                      {viewVersion?.id === v.id ? 'Hide' : 'View'}
+                    </button>
+                    {i !== 0 && (
+                      <button
+                        type="button"
+                        onClick={() => restoreVersion(v)}
+                        className="text-xs font-medium text-gray-600 border border-gray-300 hover:bg-gray-50 rounded px-2 py-0.5"
+                      >
+                        Restore
+                      </button>
+                    )}
+                  </div>
+                </div>
+                {viewVersion?.id === v.id && (
+                  <pre className="border-t border-gray-200 bg-gray-50 px-3 py-2 text-[11px] leading-relaxed whitespace-pre-wrap max-h-72 overflow-y-auto">
+                    {v.content}
+                  </pre>
+                )}
               </div>
-              <span className="text-xs text-gray-500">{new Date(doc.updated_at).toLocaleString()}</span>
-            </div>
-            <p className="text-[11px] text-gray-500 italic">Previous versions will be tracked once you publish new versions of this document.</p>
+            ))}
           </div>
         </div>
       )}
@@ -419,25 +518,44 @@ function DocumentDetail({ doc, evidence, activeTab, setTab, onBack, onUpdate, on
 
           <div className="flex flex-wrap gap-2">
             {doc.status === 'draft' && (
-              <button type="button" onClick={() => onUpdate({ status: 'in_review' })} className="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-4 py-2 rounded-md">Submit for review</button>
+              <button type="button" onClick={() => changeStatus('in_review', 'submitted_for_review')} className="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-4 py-2 rounded-md">Submit for review</button>
             )}
             {doc.status === 'in_review' && (
               <>
-                <button type="button" onClick={() => onUpdate({ status: 'approved' })} className="bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-medium px-4 py-2 rounded-md">Approve (final)</button>
-                <button type="button" onClick={() => onUpdate({ status: 'draft' })} className="text-sm font-medium border border-gray-300 text-gray-700 hover:bg-gray-50 px-3 py-2 rounded-md">Send back to draft</button>
+                <button type="button" onClick={() => changeStatus('approved', 'approved')} className="bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-medium px-4 py-2 rounded-md">Approve (final)</button>
+                <button type="button" onClick={() => changeStatus('draft', 'sent_back_to_draft')} className="text-sm font-medium border border-gray-300 text-gray-700 hover:bg-gray-50 px-3 py-2 rounded-md">Send back to draft</button>
               </>
             )}
             {doc.status === 'approved' && (
-              <button type="button" onClick={() => onUpdate({ status: 'obsolete' })} className="text-sm font-medium border border-gray-300 text-gray-700 hover:bg-gray-50 px-3 py-2 rounded-md">Mark obsolete</button>
+              <button type="button" onClick={() => changeStatus('obsolete', 'marked_obsolete')} className="text-sm font-medium border border-gray-300 text-gray-700 hover:bg-gray-50 px-3 py-2 rounded-md">Mark obsolete</button>
             )}
             {doc.status === 'obsolete' && (
-              <button type="button" onClick={() => onUpdate({ status: 'draft' })} className="text-sm font-medium border border-gray-300 text-gray-700 hover:bg-gray-50 px-3 py-2 rounded-md">Reopen as draft</button>
+              <button type="button" onClick={() => changeStatus('draft', 'reopened_as_draft')} className="text-sm font-medium border border-gray-300 text-gray-700 hover:bg-gray-50 px-3 py-2 rounded-md">Reopen as draft</button>
             )}
           </div>
 
-          <p className="text-[11px] text-gray-500 mt-4">
-            Reviewer and QMS stages share the "in review" status. To distinguish them at the table level, add an <code>approvals</code> jsonb column to <code>documents</code> later.
-          </p>
+          <div className="mt-6">
+            <div className="text-xs font-semibold text-gray-700 mb-2">Audit trail</div>
+            {events.length === 0 ? (
+              <p className="text-[11px] text-gray-500 italic">
+                No events recorded yet. (If this stays empty after actions, run
+                migration_document_control.sql in Supabase.)
+              </p>
+            ) : (
+              <ul className="space-y-1.5">
+                {events.map((ev) => (
+                  <li key={ev.id} className="flex items-center gap-2 text-xs text-gray-600">
+                    <span className="font-medium text-gray-800">{EVENT_LABELS[ev.action] ?? ev.action}</span>
+                    {ev.detail && <span className="text-gray-400">· {ev.detail}</span>}
+                    <span className="text-gray-400 ml-auto shrink-0">
+                      {ev.actor_email ?? 'unknown'} · {new Date(ev.created_at).toLocaleString()}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+
         </div>
       )}
     </div>
