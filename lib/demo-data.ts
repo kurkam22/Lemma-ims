@@ -54,12 +54,19 @@ export const DEMO_JOURNEY: JourneyStage[] = [
 
 export type ChainStatus = 'done' | 'progress' | 'missing'
 
+// Provenance: never let a company choice look like an ISO demand.
+//  'iso'     — the standard asks for this (cite the clause)
+//  'company' — the company decided this (frequency, format, method)
+export type Origin = 'iso' | 'company'
+
 export type ComplianceChainRow = {
   clause: string
   requirement: string
   answer: string
-  document: { label: string; status: ChainStatus }
-  evidence: { label: string; status: ChainStatus }
+  /** Why the answer says what it says — a company rule, not an ISO rule. */
+  answerOrigin?: Origin
+  document: { label: string; status: ChainStatus; origin?: Origin }
+  evidence: { label: string; status: ChainStatus; origin?: Origin }
   audit: { label: string; status: ChainStatus }
   capa: { label: string; status: ChainStatus } | null
 }
@@ -67,37 +74,41 @@ export type ComplianceChainRow = {
 export const DEMO_CHAIN: ComplianceChainRow[] = [
   {
     clause: '7.2',
-    requirement: 'Competence — staff must be competent for their roles.',
+    requirement: 'Staff must be competent for their work, and you must keep evidence of it.',
     answer: 'We train operators and keep skill records.',
-    document: { label: 'Competence procedure', status: 'done' },
-    evidence: { label: 'Training records', status: 'missing' },
+    answerOrigin: 'company',
+    document: { label: 'Competence procedure', status: 'done', origin: 'company' },
+    evidence: { label: 'Training records', status: 'missing', origin: 'iso' },
     audit: { label: 'Not yet audited', status: 'progress' },
     capa: { label: 'Upload training records', status: 'missing' },
   },
   {
     clause: '8.4',
-    requirement: 'Control of external providers (suppliers).',
-    answer: 'We approve and re-evaluate key suppliers yearly.',
-    document: { label: 'Supplier procedure', status: 'done' },
-    evidence: { label: 'Evaluation record', status: 'missing' },
+    requirement: 'You must set criteria for choosing and re-checking suppliers, and keep the results.',
+    answer: 'Our rule: re-check key suppliers yearly (we chose this because a bad supplier stops production).',
+    answerOrigin: 'company',
+    document: { label: 'Supplier procedure', status: 'done', origin: 'company' },
+    evidence: { label: 'Evaluation record', status: 'missing', origin: 'iso' },
     audit: { label: 'Minor finding', status: 'progress' },
     capa: { label: 'Supplier evaluation record', status: 'progress' },
   },
   {
     clause: '9.2',
-    requirement: 'Internal audit at planned intervals.',
-    answer: 'We plan to audit twice a year.',
-    document: { label: 'Audit procedure', status: 'done' },
-    evidence: { label: 'Audit report', status: 'progress' },
+    requirement: 'Audit yourself at intervals you plan and justify — based on what matters most and what went wrong before.',
+    answer: 'Our plan: production twice a year, office once (production carries the most risk).',
+    answerOrigin: 'company',
+    document: { label: 'Audit procedure', status: 'done', origin: 'company' },
+    evidence: { label: 'Audit report', status: 'progress', origin: 'iso' },
     audit: { label: 'Audit plan needed', status: 'missing' },
     capa: null,
   },
   {
     clause: '6.2',
-    requirement: 'Quality objectives must be measurable.',
+    requirement: 'Quality goals must be measurable, monitored, and have someone responsible.',
     answer: 'We aim to improve quality and reduce complaints.',
-    document: { label: 'Objectives register', status: 'progress' },
-    evidence: { label: 'KPI tracking', status: 'missing' },
+    answerOrigin: 'company',
+    document: { label: 'Objectives register', status: 'progress', origin: 'iso' },
+    evidence: { label: 'KPI tracking', status: 'missing', origin: 'iso' },
     audit: { label: 'Not yet audited', status: 'progress' },
     capa: { label: 'Add measurable KPIs', status: 'progress' },
   },

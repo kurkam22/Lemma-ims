@@ -3,6 +3,7 @@ import CertificationJourney from '@/app/dashboard/_components/certification-jour
 import ComplianceChain from '@/app/dashboard/_components/compliance-chain'
 import ComplianceMetro from '@/app/dashboard/_components/compliance-metro'
 import { DEMO_METRO } from '@/lib/metro-data'
+import { READINESS_DISCLAIMER } from '@/lib/readiness'
 import AiInsights from '@/app/dashboard/_components/ai-insights'
 import {
   DEMO_COMPANY,
@@ -105,6 +106,10 @@ export default function PublicDemoPage() {
             </div>
           ))}
         </div>
+
+        <p className="text-[11px] leading-relaxed px-1" style={{ color: 'var(--lemma-mist)' }}>
+          {READINESS_DISCLAIMER}
+        </p>
 
         <ComplianceChain rows={DEMO_CHAIN} />
 

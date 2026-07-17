@@ -16,6 +16,7 @@ import {
   DEMO_READINESS_BY_AREA,
   DEMO_PRIORITIES,
 } from '@/lib/demo-data'
+import { READINESS_DISCLAIMER } from '@/lib/readiness'
 
 const SETUP_TOTAL_STEPS = 5
 
@@ -255,6 +256,10 @@ export default function DashboardPage() {
           tone="check"
         />
       </div>
+
+      <p className="text-[11px] leading-relaxed" style={{ color: 'var(--lemma-mist)' }}>
+        {READINESS_DISCLAIMER}
+      </p>
 
       <ComplianceChain rows={DEMO_CHAIN} />
 

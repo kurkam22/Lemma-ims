@@ -11,6 +11,32 @@ export type Question = {
 }
 
 export const QUESTIONNAIRES: Record<string, Question[]> = {
+  'Customer satisfaction procedure': [
+    { id: 'sources', kind: 'textarea', label: 'How do you find out what customers think of you?', hint: 'Complaints, repeat orders, returns, surveys, direct conversations — anything already happening counts', placeholder: 'One per line' },
+    { id: 'frequency', kind: 'text', label: 'How often do you look at this information?', placeholder: 'e.g. complaints as they arrive; a summary every quarter' },
+    { id: 'owner', kind: 'text', label: 'Who is responsible for watching customer satisfaction?', placeholder: 'e.g. Sales manager, reviewed by Director' },
+    { id: 'action', kind: 'text', label: 'What happens when satisfaction drops?', placeholder: 'e.g. becomes a corrective action; raised at management review' },
+  ],
+  'Calibration & measuring equipment procedure': [
+    { id: 'equipment', kind: 'textarea', label: 'Which equipment decides whether your work passes or fails?', hint: 'Scales, gauges, thermometers, testers — only the ones whose reading decides acceptance', placeholder: 'One per line, with location if useful' },
+    { id: 'frequency', kind: 'text', label: 'How often is each calibrated or checked — and on what basis?', hint: 'ISO says “at specified intervals” — you set them (often from the maker’s advice or how heavily it is used).', placeholder: 'e.g. scales yearly by an external lab (maker’s advice); thermometers checked monthly in-house' },
+    { id: 'who', kind: 'text', label: 'Who calibrates them?', placeholder: 'e.g. accredited external laboratory; internal check against a reference' },
+    { id: 'identification', kind: 'text', label: 'How do you know an item is in date?', placeholder: 'e.g. calibration sticker with next-due date' },
+    { id: 'if_wrong', kind: 'text', label: 'What do you do if equipment is found out of calibration?', hint: 'The standard expects you to consider work already done with it', placeholder: 'e.g. quarantine it, review recent output, inform customers if affected' },
+  ],
+  'Nonconforming output procedure': [
+    { id: 'detection', kind: 'text', label: 'How is faulty work usually spotted?', placeholder: 'e.g. inspection before dispatch, operator check, customer complaint' },
+    { id: 'segregation', kind: 'text', label: 'Where does faulty work go so it cannot be used by mistake?', placeholder: 'e.g. red quarantine area, labelled shelf, blocked in the system' },
+    { id: 'decisions', kind: 'text', label: 'Who decides what happens to it — and what are the options?', hint: 'Typical options: rework, scrap, downgrade, or accept with permission', placeholder: 'e.g. Production manager decides: rework, scrap, or ask customer for concession' },
+    { id: 'customer', kind: 'text', label: 'When do you tell the customer?', placeholder: 'e.g. always, if it already shipped or if we ask for a concession' },
+    { id: 'recheck', kind: 'text', label: 'How do you confirm reworked items are now good?', placeholder: 'e.g. re-inspected against the same criteria and recorded' },
+  ],
+  'Interested parties register': [
+    { id: 'parties', kind: 'textarea', label: 'Who has a stake in your quality?', hint: 'Customers, regulators, suppliers, staff, neighbours, your bank — anyone who affects you or is affected', placeholder: 'One per line' },
+    { id: 'needs', kind: 'textarea', label: 'What does each of them expect from you?', placeholder: 'e.g. Customers — on-time delivery; Regulator — hygiene compliance' },
+    { id: 'review', kind: 'text', label: 'How often do you revisit this list?', placeholder: 'e.g. yearly at management review' },
+  ],
+
   'IMS Policy': [
     { id: 'commitments', kind: 'textarea', label: 'Your 3–5 main commitments', hint: 'e.g. customer satisfaction, on-time delivery, fewer defects, legal compliance, staff safety', placeholder: 'One per line' },
     { id: 'approver', kind: 'text', label: 'Who approves and signs the policy?', placeholder: 'e.g. General Director Kim Minsoo' },
@@ -32,7 +58,7 @@ export const QUESTIONNAIRES: Record<string, Question[]> = {
   'Supplier evaluation procedure': [
     { id: 'criteria', kind: 'textarea', label: 'What matters when you choose a supplier?', placeholder: 'e.g. quality of samples, price, delivery reliability, certificates' },
     { id: 'key_suppliers', kind: 'textarea', label: 'Your most critical suppliers (name + what they supply)', placeholder: 'One per line' },
-    { id: 'reeval', kind: 'text', label: 'How often do you re-check suppliers?', placeholder: 'e.g. yearly, or after any serious problem' },
+    { id: 'reeval', kind: 'text', label: 'How often will you re-check suppliers — and why that interval?', hint: 'ISO does not set a frequency. You choose it based on how much damage a bad supplier could do, and how they have performed before. Say the reason too — an auditor will ask.', placeholder: 'e.g. key suppliers yearly (they can stop production); others every 2 years' },
     { id: 'failure_action', kind: 'text', label: 'What happens if a supplier fails evaluation?', placeholder: 'e.g. corrective request, then replacement' },
   ],
   'CAPA procedure': [
@@ -42,7 +68,7 @@ export const QUESTIONNAIRES: Record<string, Question[]> = {
     { id: 'verify', kind: 'text', label: 'How do you confirm a fix actually worked?', placeholder: 'e.g. re-check after 30 days, monitor complaint rate' },
   ],
   'Internal audit procedure': [
-    { id: 'frequency', kind: 'text', label: 'How often will you audit yourselves?', placeholder: 'e.g. full system once a year, production twice' },
+    { id: 'frequency', kind: 'text', label: 'How often will you audit each area — and why?', hint: 'ISO asks for “planned intervals” you can justify: audit the important and problem-prone areas more often. There is no required number.', placeholder: 'e.g. production twice a year (highest risk), office once, after any major change' },
     { id: 'auditors', kind: 'text', label: 'Who will perform internal audits?', hint: 'Auditors must not audit their own work', placeholder: 'e.g. QMS manager audits production; office lead audits QMS' },
     { id: 'reporting', kind: 'text', label: 'Who receives audit results?', placeholder: 'e.g. Director and process owners' },
     { id: 'followup', kind: 'text', label: 'What happens with findings?', placeholder: 'e.g. each finding becomes a corrective action with a deadline' },
@@ -54,7 +80,7 @@ export const QUESTIONNAIRES: Record<string, Question[]> = {
     { id: 'effectiveness', kind: 'text', label: 'How do you check training worked?', placeholder: 'e.g. supervisor observation, short quiz' },
   ],
   'Management review procedure': [
-    { id: 'frequency', kind: 'text', label: 'How often does management review the system?', placeholder: 'e.g. every 6 months' },
+    { id: 'frequency', kind: 'text', label: 'How often will management review the system — and why that interval?', hint: 'ISO says “planned intervals”, not a fixed number. Most small companies choose yearly or twice yearly.', placeholder: 'e.g. yearly, plus after any big change' },
     { id: 'attendees', kind: 'text', label: 'Who attends the review?', placeholder: 'e.g. Director, QMS manager, department heads' },
     { id: 'inputs_extra', kind: 'textarea', label: 'Anything specific your reviews should always cover?', hint: 'Standard inputs (audits, complaints, objectives, resources) are included automatically', placeholder: 'e.g. key customer feedback, seasonal capacity' },
     { id: 'minutes_owner', kind: 'text', label: 'Who writes and keeps the minutes?', placeholder: 'e.g. QMS manager' },

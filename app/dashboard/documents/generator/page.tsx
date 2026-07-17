@@ -7,6 +7,10 @@ import { snapshotVersion, logEvent } from '@/lib/document-control'
 
 const DOCUMENT_TYPES = [
   'IMS Policy',
+  'Customer satisfaction procedure',
+  'Calibration & measuring equipment procedure',
+  'Nonconforming output procedure',
+  'Interested parties register',
   'Quality procedure',
   'Risk register',
   'Supplier evaluation procedure',
@@ -23,6 +27,10 @@ type DocType = (typeof DOCUMENT_TYPES)[number]
 
 const TEMPLATES: Record<DocType, string[]> = {
   'IMS Policy': ['Purpose', 'Scope', 'Policy statement', 'Commitments', 'Communication', 'Approval'],
+  'Customer satisfaction procedure': ['Purpose', 'Scope', 'Information sources', 'How we monitor', 'Analysis & review', 'Actions when satisfaction drops', 'Records'],
+  'Calibration & measuring equipment procedure': ['Purpose', 'Scope', 'Equipment register', 'Calibration intervals & method', 'Identification of status', 'Handling out-of-calibration equipment', 'Records'],
+  'Nonconforming output procedure': ['Purpose', 'Scope', 'Detection', 'Segregation & identification', 'Decision options (rework, scrap, concession)', 'Informing the customer', 'Re-verification', 'Records'],
+  'Interested parties register': ['Purpose', 'Scope', 'Interested parties table', 'Their needs & expectations', 'Review schedule'],
   'Quality procedure': ['Purpose', 'Scope', 'Responsibilities', 'Procedure steps', 'Records', 'References'],
   'Risk register': ['Purpose', 'Scope', 'Methodology', 'Risk register table', 'Review schedule'],
   'Supplier evaluation procedure': ['Purpose', 'Scope', 'Selection criteria', 'Evaluation process', 'Approval', 'Monitoring'],
@@ -37,6 +45,10 @@ const TEMPLATES: Record<DocType, string[]> = {
 
 const COVERED_CLAUSES: Record<DocType, string[]> = {
   'IMS Policy': ['5.2', '5.1'],
+  'Customer satisfaction procedure': ['9.1.2', '9.1.3'],
+  'Calibration & measuring equipment procedure': ['7.1.5'],
+  'Nonconforming output procedure': ['8.7', '10.2'],
+  'Interested parties register': ['4.2'],
   'Quality procedure': ['7.5', '4.4'],
   'Risk register': ['6.1'],
   'Supplier evaluation procedure': ['8.4'],

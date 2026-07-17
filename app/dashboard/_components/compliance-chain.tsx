@@ -1,6 +1,6 @@
 'use client'
 
-import type { ComplianceChainRow, ChainStatus } from '@/lib/demo-data'
+import type { ComplianceChainRow, ChainStatus, Origin } from '@/lib/demo-data'
 
 const STATUS_STYLE: Record<ChainStatus, { bg: string; fg: string; dot: string; label: string }> = {
   done: {
@@ -29,10 +29,12 @@ function Node({
   label,
   status,
   strong,
+  origin,
 }: {
   label: string
   status?: ChainStatus
   strong?: boolean
+  origin?: Origin
 }) {
   const s = status ? STATUS_STYLE[status] : null
   return (
@@ -63,6 +65,19 @@ function Node({
       >
         {label}
       </div>
+      {origin && (
+        <div
+          className="text-[9px] mt-1 font-medium"
+          style={{ color: origin === 'iso' ? 'var(--lemma-primary)' : 'var(--lemma-mist)' }}
+          title={
+            origin === 'iso'
+              ? 'This comes from the ISO standard.'
+              : 'Your company decided this — the standard does not set it.'
+          }
+        >
+          {origin === 'iso' ? 'ISO requirement' : 'Your company’s choice'}
+        </div>
+      )}
     </div>
   )
 }
@@ -122,13 +137,13 @@ export default function ComplianceChain({ rows }: { rows: ComplianceChainRow[] }
                   {r.clause}
                 </span>
               </div>
-              <Node label={r.requirement} strong />
+              <Node label={r.requirement} strong origin="iso" />
               <Arrow />
-              <Node label={r.answer} />
+              <Node label={r.answer} origin={r.answerOrigin} />
               <Arrow />
-              <Node label={r.document.label} status={r.document.status} />
+              <Node label={r.document.label} status={r.document.status} origin={r.document.origin} />
               <Arrow />
-              <Node label={r.evidence.label} status={r.evidence.status} />
+              <Node label={r.evidence.label} status={r.evidence.status} origin={r.evidence.origin} />
               <Arrow />
               <Node label={r.audit.label} status={r.audit.status} />
               {r.capa && (
