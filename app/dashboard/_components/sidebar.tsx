@@ -135,6 +135,7 @@ export default function Sidebar({
     {
       title: 'STANDARDS & REQUIREMENTS',
       items: [
+        { label: 'Build step by step', href: '/dashboard/guided-build', icon: 'layers' },
         { label: 'Requirements explained', href: '/dashboard/standards', icon: 'layers' },
         { label: 'Recommended standards', href: '/dashboard/standards-catalogue', icon: 'layers' },
         { label: 'My selected standards', href: '/dashboard/standards-catalogue', icon: 'layers' },
