@@ -234,18 +234,46 @@ export default function GeneratorPage() {
     }
   }
 
-  function exportWord() {
-    const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>${escapeHtml(documentType)}</title>
-<style>body{font-family:Calibri,Arial,sans-serif;max-width:720px;margin:40px auto;line-height:1.5;}pre{white-space:pre-wrap;font-family:inherit;font-size:11pt;}</style>
-</head><body><pre>${escapeHtml(text)}</pre></body></html>`
-    const blob = new Blob([html], { type: 'application/msword' })
+  async function exportFile(format: 'docx' | 'xlsx', email?: string) {
+    const res = await fetch('/api/documents/export', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        content: text,
+        format,
+        email,
+        meta: {
+          title: documentType,
+          documentCode: savedCode,
+          standard: 'ISO 9001:2015',
+          clauses: (COVERED_CLAUSES[documentType] ?? []).join(', '),
+          status: 'DRAFT',
+        },
+      }),
+    })
+    if (email) {
+      const j = await res.json().catch(() => ({}))
+      if (!res.ok) setNotice(j.error ?? `Could not send (${res.status})`)
+      else setNotice(j.message ?? 'Sent.')
+      return
+    }
+    if (!res.ok) {
+      const j = await res.json().catch(() => ({}))
+      setNotice(j.error ?? `Export failed (${res.status})`)
+      return
+    }
+    const blob = await res.blob()
     const a = document.createElement('a')
     a.href = URL.createObjectURL(blob)
-    a.download = `${documentType.replace(/\s+/g, '-')}-${(savedCode ?? 'draft').toLowerCase()}.doc`
+    a.download = `${documentType.replace(/\s+/g, '-').toLowerCase()}-${(savedCode ?? 'draft').toLowerCase()}.${format}`
     document.body.appendChild(a)
     a.click()
     document.body.removeChild(a)
     URL.revokeObjectURL(a.href)
+  }
+
+  function exportWord() {
+    void exportFile('docx')
   }
 
   if (loading) return <div className="text-sm text-gray-500">Loading…</div>
@@ -288,6 +316,8 @@ export default function GeneratorPage() {
           onSaveDraft={() => save(false)}
           onConfirmOfficial={() => save(true)}
           onExportWord={exportWord}
+          onExportExcel={() => void exportFile('xlsx')}
+          onEmailDoc={(email: string) => void exportFile('docx', email)}
           onPrint={() => window.print()}
           savedCode={savedCode}
         />
@@ -335,7 +365,7 @@ function LeftPanel({ sections, completePct }: { sections: { name: string; status
 
 function CenterPanel({
   documentType, setDocumentType, answers, setAnswer, text, setText, streaming, saving,
-  onGenerate, onSaveDraft, onConfirmOfficial, onExportWord, onPrint, savedCode,
+  onGenerate, onSaveDraft, onConfirmOfficial, onExportWord, onExportExcel, onEmailDoc, onPrint, savedCode,
 }: {
   documentType: DocType
   setDocumentType: (t: DocType) => void
@@ -349,6 +379,8 @@ function CenterPanel({
   onSaveDraft: () => void
   onConfirmOfficial: () => void
   onExportWord: () => void
+  onExportExcel: () => void
+  onEmailDoc: (email: string) => void
   onPrint: () => void
   savedCode: string | null
 }) {
@@ -451,6 +483,8 @@ function CenterPanel({
         </div>
         <div className="flex gap-2">
           <button type="button" onClick={onExportWord} disabled={!text.trim()} className="text-sm font-medium text-gray-700 hover:text-gray-900 border border-gray-300 hover:bg-gray-50 px-3 py-1.5 rounded-md disabled:opacity-50">Word</button>
+          <button type="button" onClick={onExportExcel} disabled={!text.trim()} className="text-sm font-medium text-gray-700 hover:text-gray-900 border border-gray-300 hover:bg-gray-50 px-3 py-1.5 rounded-md disabled:opacity-50">Excel</button>
+          <button type="button" onClick={() => { const e = window.prompt('Send this document to which email address?'); if (e) onEmailDoc(e) }} disabled={!text.trim()} className="text-sm font-medium text-gray-700 hover:text-gray-900 border border-gray-300 hover:bg-gray-50 px-3 py-1.5 rounded-md disabled:opacity-50">Email</button>
           <button type="button" onClick={onPrint} disabled={!text.trim()} className="text-sm font-medium text-gray-700 hover:text-gray-900 border border-gray-300 hover:bg-gray-50 px-3 py-1.5 rounded-md disabled:opacity-50">PDF</button>
           <button type="button" onClick={onPrint} disabled={!text.trim()} className="text-sm font-medium text-gray-700 hover:text-gray-900 border border-gray-300 hover:bg-gray-50 px-3 py-1.5 rounded-md disabled:opacity-50">Print</button>
         </div>
