@@ -10,6 +10,7 @@ import { createClient } from '@/lib/supabase/server'
  */
 
 const DAILY_LIMITS: Record<string, number> = {
+  questions: 60, // questionnaire generations / day / user
   generate: 40, // full document generations / day / user
   check: 40, // compliance checks / day / user
   classify: 200, // evidence classifications / day / user

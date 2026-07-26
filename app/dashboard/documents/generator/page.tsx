@@ -2,8 +2,9 @@
 
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { QUESTIONNAIRES, MAX_ANSWER_CHARS } from '@/lib/questionnaires'
+import { QUESTIONNAIRES, MAX_ANSWER_CHARS, type Question } from '@/lib/questionnaires'
 import { snapshotVersion, logEvent } from '@/lib/document-control'
+import { DOC_SETS } from '@/lib/required-documents'
 
 const DOCUMENT_TYPES = [
   'IMS Policy',
@@ -81,7 +82,19 @@ const COMPANY_FIELDS: { key: string; label: string; isList?: boolean }[] = [
 type Company = Record<string, unknown> & { id: string; name: string; document_code_prefix?: string | null }
 
 export default function GeneratorPage() {
+  const [standardId, setStandardId] = useState('iso-9001')
   const [documentType, setDocumentType] = useState<DocType>('IMS Policy')
+
+  // Documents offered depend on the chosen standard: ISO 9001 keeps the curated
+  // list; other standards offer their own required documents.
+  const docOptions: string[] =
+    standardId === 'iso-9001'
+      ? [...DOCUMENT_TYPES]
+      : (DOC_SETS.find((s) => s.standardId === standardId)?.docs ?? []).map((d) => d.isoTitle ?? d.title)
+  const standardLabelFull =
+    DOC_SETS.find((s) => s.standardId === standardId)?.standardLabel ?? 'ISO 9001 — Quality Management'
+  const standardCode = standardLabelFull.split('—')[0].trim() +
+    (standardId === 'iso-9001' ? ':2015' : standardId === 'iso-45001' ? ':2018' : standardId === 'iso-22000' ? ':2018' : standardId === 'iso-27001' ? ':2022' : ':2015')
   const [answers, setAnswers] = useState<Record<string, string>>({})
   const [text, setText] = useState('')
   const [streaming, setStreaming] = useState(false)
@@ -304,6 +317,17 @@ export default function GeneratorPage() {
       <div className="grid grid-cols-1 lg:grid-cols-[240px,1fr,300px] gap-4">
         <LeftPanel sections={sectionStatuses} completePct={completePct} />
         <CenterPanel
+          standardId={standardId}
+          standardCode={standardCode}
+          setStandardId={(id: string) => {
+            setStandardId(id)
+            const opts = id === 'iso-9001'
+              ? [...DOCUMENT_TYPES]
+              : (DOC_SETS.find((s) => s.standardId === id)?.docs ?? []).map((d) => d.isoTitle ?? d.title)
+            if (opts.length > 0) setDocumentType(opts[0] as DocType)
+            setAnswers({}); setText(''); setSavedDocId(null); setSavedCode(null); setNotice(null)
+          }}
+          docOptions={docOptions}
           documentType={documentType}
           setDocumentType={(t) => { setDocumentType(t); setAnswers({}); setText(''); setSavedDocId(null); setSavedCode(null); setNotice(null) }}
           answers={answers}
@@ -364,9 +388,14 @@ function LeftPanel({ sections, completePct }: { sections: { name: string; status
 }
 
 function CenterPanel({
+  standardId, standardCode, setStandardId, docOptions,
   documentType, setDocumentType, answers, setAnswer, text, setText, streaming, saving,
   onGenerate, onSaveDraft, onConfirmOfficial, onExportWord, onExportExcel, onEmailDoc, onPrint, savedCode,
 }: {
+  standardId: string
+  standardCode: string
+  setStandardId: (id: string) => void
+  docOptions: string[]
   documentType: DocType
   setDocumentType: (t: DocType) => void
   answers: Record<string, string>
@@ -384,18 +413,65 @@ function CenterPanel({
   onPrint: () => void
   savedCode: string | null
 }) {
-  const questions = QUESTIONNAIRES[documentType] ?? []
+  const [aiQuestions, setAiQuestions] = useState<Question[]>([])
+  const [loadingQs, setLoadingQs] = useState(false)
+  const [qSource, setQSource] = useState<'curated' | 'ai' | null>(null)
+  const curated = QUESTIONNAIRES[documentType] ?? []
+  const questions = curated.length > 0 ? curated : aiQuestions
+
+  // When a document type has no curated questions, ask the AI to build them —
+  // grounded in what the clause actually requires.
+  useEffect(() => {
+    if (curated.length > 0) {
+      setQSource('curated')
+      setAiQuestions([])
+      return
+    }
+    let cancelled = false
+    setLoadingQs(true)
+    setQSource(null)
+    fetch('/api/questions/generate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        documentTitle: documentType,
+        standard: standardCode,
+        clauseRefs: COVERED_CLAUSES[documentType as DocType] ?? [],
+      }),
+    })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((j) => {
+        if (cancelled || !j?.questions) return
+        setAiQuestions(j.questions)
+        setQSource(j.source ?? 'ai')
+      })
+      .catch(() => {})
+      .finally(() => { if (!cancelled) setLoadingQs(false) })
+    return () => { cancelled = true }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [documentType, standardCode])
   const answeredCount = questions.filter((q) => (answers[q.id] ?? '').trim() !== '').length
   return (
     <div className="bg-white border border-gray-200 rounded-lg overflow-hidden flex flex-col">
       <div className="px-4 py-3 border-b border-gray-200 flex flex-wrap gap-2 items-center">
+        <select
+          value={standardId}
+          onChange={(e) => setStandardId(e.target.value)}
+          disabled={streaming}
+          title="Which standard are you writing for?"
+          className="text-sm border border-gray-300 rounded-md px-3 py-1.5 bg-white"
+        >
+          {DOC_SETS.map((s) => (
+            <option key={s.standardId} value={s.standardId}>{s.standardLabel}</option>
+          ))}
+        </select>
         <select
           value={documentType}
           onChange={(e) => setDocumentType(e.target.value as DocType)}
           disabled={streaming}
           className="text-sm border border-gray-300 rounded-md px-3 py-1.5 bg-white"
         >
-          {DOCUMENT_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
+          {docOptions.map((t) => <option key={t} value={t}>{t}</option>)}
         </select>
         <button
           type="button"
@@ -412,11 +488,25 @@ function CenterPanel({
         )}
       </div>
 
+      {loadingQs && !streaming && text === '' && (
+        <div className="px-4 py-3 border-b border-gray-200 bg-gray-50/60 text-xs text-gray-500">
+          Working out which questions this document needs…
+        </div>
+      )}
+
       {questions.length > 0 && !streaming && text === '' && (
         <div className="px-4 py-3 border-b border-gray-200 bg-gray-50/60">
-          <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center justify-between mb-2 gap-2 flex-wrap">
             <div className="text-xs font-semibold text-gray-700">
               Answer a few questions so the draft is about <span className="text-blue-700">your</span> company
+              {qSource === 'ai' && (
+                <span
+                  className="ml-2 text-[10px] font-medium text-emerald-700 bg-emerald-50 border border-emerald-200 rounded px-1.5 py-0.5"
+                  title="These questions were built for this document from what the requirement asks. Review them — you can skip any that don't apply."
+                >
+                  questions built for this document
+                </span>
+              )}
             </div>
             <div className="text-[10px] text-gray-400">
               {answeredCount}/{questions.length} answered · skipped items become [TO CONFIRM]
