@@ -9,6 +9,7 @@ import ComplianceMetro from '@/app/dashboard/_components/compliance-metro'
 import { DEMO_METRO } from '@/lib/metro-data'
 import AiInsights from '@/app/dashboard/_components/ai-insights'
 import AttentionList from '@/app/dashboard/_components/attention-list'
+import SummaryCard from '@/app/dashboard/_components/summary-card'
 import {
   DEMO_COMPANY,
   DEMO_JOURNEY,
@@ -18,7 +19,6 @@ import {
 } from '@/lib/demo-data'
 import { getDemoAttention } from '@/lib/demo-attention'
 import { buildAttention, type AttentionItem } from '@/lib/attention'
-import { READINESS_DISCLAIMER } from '@/lib/readiness'
 
 const SETUP_TOTAL_STEPS = 5
 
@@ -312,22 +312,21 @@ export default function DashboardPage() {
         <SetupBanner step={data.setupStep} total={SETUP_TOTAL_STEPS} />
       )}
 
-      <AttentionList
-        items={attention}
-        emptyHref={setupComplete ? '/dashboard/compliance-check' : '/dashboard/setup'}
-        emptyLabel={setupComplete ? 'Run your readiness check' : 'Continue setup'}
-      />
-
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <StatCard label="Overall readiness" value={`${view.readinessPct}%`} tone="primary" />
-        <StatCard label="Documents approved" value={view.documentsReady.toString()} tone="do" />
-        <StatCard label="Evidence confirmed" value={view.evidenceConfirmed.toString()} tone="do" />
-        <StatCard label="Open corrective actions" value={view.openCapas.toString()} tone="danger" />
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 items-start">
+        <div className="lg:col-span-2">
+          <AttentionList
+            items={attention}
+            emptyHref={setupComplete ? '/dashboard/compliance-check' : '/dashboard/setup'}
+            emptyLabel={setupComplete ? 'Run your readiness check' : 'Continue setup'}
+          />
+        </div>
+        <SummaryCard
+          readinessPct={view.readinessPct}
+          documentsReady={view.documentsReady}
+          evidenceConfirmed={view.evidenceConfirmed}
+          openCapas={view.openCapas}
+        />
       </div>
-
-      <p className="text-[11px] leading-relaxed" style={{ color: 'var(--lemma-mist)' }}>
-        {READINESS_DISCLAIMER}
-      </p>
 
       {usingDemo ? (
         <>

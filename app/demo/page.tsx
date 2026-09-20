@@ -3,9 +3,9 @@ import CertificationJourney from '@/app/dashboard/_components/certification-jour
 import ComplianceChain from '@/app/dashboard/_components/compliance-chain'
 import ComplianceMetro from '@/app/dashboard/_components/compliance-metro'
 import { DEMO_METRO } from '@/lib/metro-data'
-import { READINESS_DISCLAIMER } from '@/lib/readiness'
 import AiInsights from '@/app/dashboard/_components/ai-insights'
 import AttentionList from '@/app/dashboard/_components/attention-list'
+import SummaryCard from '@/app/dashboard/_components/summary-card'
 import { getDemoAttention } from '@/lib/demo-attention'
 import {
   DEMO_COMPANY,
@@ -35,13 +35,6 @@ function formatDate(d: string) {
 }
 
 export default function PublicDemoPage() {
-  const stats = [
-    { label: 'Overall readiness', value: `${DEMO_COMPANY.readinessPct}%`, tone: 'var(--lemma-primary)' },
-    { label: 'Documents approved', value: String(DEMO_COMPANY.documentsReady), tone: 'var(--lemma-do)' },
-    { label: 'Evidence confirmed', value: String(DEMO_COMPANY.evidenceConfirmed), tone: 'var(--lemma-do)' },
-    { label: 'Open corrective actions', value: String(DEMO_COMPANY.openCapa), tone: 'var(--lemma-danger)' },
-  ]
-
   return (
     <div style={{ background: 'var(--lemma-canvas)', minHeight: '100vh' }}>
       {/* Public top bar */}
@@ -86,26 +79,19 @@ export default function PublicDemoPage() {
           </p>
         </div>
 
-        <AttentionList items={getDemoAttention()} emptyHref="/register" emptyLabel="Start free" />
-
-        <CertificationJourney stages={DEMO_JOURNEY} activeStage={DEMO_COMPANY.currentStage} />
-
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-          {stats.map((s) => (
-            <div key={s.label} className="lemma-card p-3.5">
-              <div className="text-[11px] font-medium uppercase tracking-wide" style={{ color: 'var(--lemma-mist)' }}>
-                {s.label}
-              </div>
-              <div className="text-2xl font-semibold mt-1" style={{ color: s.tone }}>
-                {s.value}
-              </div>
-            </div>
-          ))}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 items-start">
+          <div className="lg:col-span-2">
+            <AttentionList items={getDemoAttention()} emptyHref="/register" emptyLabel="Start free" />
+          </div>
+          <SummaryCard
+            readinessPct={DEMO_COMPANY.readinessPct}
+            documentsReady={DEMO_COMPANY.documentsReady}
+            evidenceConfirmed={DEMO_COMPANY.evidenceConfirmed}
+            openCapas={DEMO_COMPANY.openCapa}
+          />
         </div>
 
-        <p className="text-[11px] leading-relaxed px-1" style={{ color: 'var(--lemma-mist)' }}>
-          {READINESS_DISCLAIMER}
-        </p>
+        <CertificationJourney stages={DEMO_JOURNEY} activeStage={DEMO_COMPANY.currentStage} />
 
         <ComplianceChain rows={DEMO_CHAIN} />
 

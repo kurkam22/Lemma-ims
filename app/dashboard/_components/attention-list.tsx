@@ -8,11 +8,24 @@ const URGENCY_STYLE: Record<Urgency, { dot: string; chipBg: string; chipFg: stri
   overdue: { dot: 'var(--lemma-danger)', chipBg: 'var(--lemma-danger-soft)', chipFg: 'var(--lemma-danger)', label: 'Overdue' },
   today: { dot: 'var(--lemma-danger)', chipBg: 'var(--lemma-danger-soft)', chipFg: 'var(--lemma-danger)', label: 'Due today' },
   soon: { dot: 'var(--lemma-check)', chipBg: 'var(--lemma-check-soft)', chipFg: 'var(--lemma-check)', label: 'This week' },
-  open: { dot: 'var(--lemma-check)', chipBg: 'var(--lemma-check-soft)', chipFg: 'var(--lemma-check)', label: 'Needs a decision' },
+  open: { dot: 'var(--lemma-check)', chipBg: 'var(--lemma-check-soft)', chipFg: 'var(--lemma-check)', label: 'Decide' },
   upcoming: { dot: 'var(--lemma-mist)', chipBg: 'var(--lemma-canvas)', chipFg: 'var(--lemma-slate)', label: 'Coming up' },
 }
 
-const VISIBLE = 6
+const VISIBLE = 4
+
+function summary(items: AttentionItem[]): { text: string; tone: 'danger' | 'normal' }[] {
+  const overdue = items.filter((i) => i.urgency === 'overdue' || i.urgency === 'today').length
+  const week = items.filter((i) => i.urgency === 'soon').length
+  const decide = items.filter((i) => i.urgency === 'open').length
+  const later = items.filter((i) => i.urgency === 'upcoming').length
+  const out: { text: string; tone: 'danger' | 'normal' }[] = []
+  if (overdue) out.push({ text: `${overdue} urgent`, tone: 'danger' })
+  if (week) out.push({ text: `${week} this week`, tone: 'normal' })
+  if (decide) out.push({ text: `${decide} to decide`, tone: 'normal' })
+  if (later) out.push({ text: `${later} coming up`, tone: 'normal' })
+  return out
+}
 
 export default function AttentionList({
   items,
@@ -27,17 +40,23 @@ export default function AttentionList({
   const [showAll, setShowAll] = useState(false)
   const shown = showAll ? items : items.slice(0, VISIBLE)
   const hidden = items.length - shown.length
+  const counts = summary(items)
 
   return (
-    <section className="lemma-card" aria-labelledby="attention-heading">
-      <div className="flex items-baseline justify-between px-5 pt-4 pb-3">
+    <section className="lemma-card overflow-hidden" aria-labelledby="attention-heading">
+      <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 px-5 pt-4 pb-3">
         <h2 id="attention-heading" className="text-[15px] font-semibold" style={{ color: 'var(--lemma-ink)' }}>
           Needs your attention
         </h2>
-        {items.length > 0 && (
-          <span className="text-xs" style={{ color: 'var(--lemma-slate)' }}>
-            {items.length} {items.length === 1 ? 'item' : 'items'}
-          </span>
+        {counts.length > 0 && (
+          <p className="text-xs" style={{ color: 'var(--lemma-slate)' }}>
+            {counts.map((c, i) => (
+              <span key={c.text}>
+                {i > 0 && ' · '}
+                <span style={c.tone === 'danger' ? { color: 'var(--lemma-danger)', fontWeight: 600 } : undefined}>{c.text}</span>
+              </span>
+            ))}
+          </p>
         )}
       </div>
 
@@ -59,46 +78,37 @@ export default function AttentionList({
         </div>
       ) : (
         <ul>
-          {shown.map((item, i) => {
+          {shown.map((item) => {
             const s = URGENCY_STYLE[item.urgency]
-            const primary = i === 0
+            const chip = item.daysLeft !== null ? dueLabel(item.daysLeft, item.due) : s.label
             return (
-              <li
-                key={item.id}
-                className="flex flex-wrap items-center gap-x-4 gap-y-2 px-5 py-3"
-                style={{ borderTop: '1px solid var(--lemma-line)' }}
-              >
-                <span
-                  aria-hidden
-                  className="w-2 h-2 rounded-full shrink-0"
-                  style={{ background: s.dot }}
-                />
-                <div className="min-w-0 flex-1 basis-64">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className="text-sm font-medium" style={{ color: 'var(--lemma-ink)' }}>
-                      {item.title}
-                    </span>
-                    <span
-                      className="text-[11px] font-medium px-2 py-0.5 rounded-full"
-                      style={{ background: s.chipBg, color: s.chipFg }}
-                    >
-                      {item.daysLeft !== null ? dueLabel(item.daysLeft, item.due) : s.label}
-                    </span>
-                  </div>
-                  <div className="text-xs mt-0.5" style={{ color: 'var(--lemma-slate)' }}>
-                    {item.detail}
-                  </div>
-                </div>
+              <li key={item.id} style={{ borderTop: '1px solid var(--lemma-line)' }}>
                 <Link
                   href={item.href}
-                  className="text-xs font-medium px-3 py-1.5 rounded-md shrink-0"
-                  style={
-                    primary
-                      ? { background: 'var(--lemma-primary)', color: '#fff' }
-                      : { border: '1px solid var(--lemma-line)', color: 'var(--lemma-primary)', background: 'var(--lemma-surface)' }
-                  }
+                  className="flex items-center gap-3 px-5 py-2.5 hover:bg-gray-50"
+                  aria-label={`${item.title}. ${chip}. ${item.actionLabel}`}
                 >
-                  {item.actionLabel}
+                  <span aria-hidden className="w-2 h-2 rounded-full shrink-0" style={{ background: s.dot }} />
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-sm font-medium" style={{ color: 'var(--lemma-ink)' }} title={item.title}>
+                      {item.title}
+                    </span>
+                    <span className="block truncate text-xs" style={{ color: 'var(--lemma-slate)' }}>
+                      <span className="sm:hidden font-medium" style={{ color: s.chipFg }}>
+                        {chip} ·{' '}
+                      </span>
+                      {item.detail}
+                    </span>
+                  </span>
+                  <span
+                    className="hidden sm:inline text-[11px] font-medium px-2 py-0.5 rounded-full whitespace-nowrap shrink-0"
+                    style={{ background: s.chipBg, color: s.chipFg }}
+                  >
+                    {chip}
+                  </span>
+                  <span className="text-xs font-medium whitespace-nowrap shrink-0" style={{ color: 'var(--lemma-primary)' }}>
+                    <span className="hidden md:inline">{item.actionLabel} </span>›
+                  </span>
                 </Link>
               </li>
             )
@@ -106,27 +116,15 @@ export default function AttentionList({
         </ul>
       )}
 
-      {hidden > 0 && (
-        <div className="px-5 py-3" style={{ borderTop: '1px solid var(--lemma-line)' }}>
+      {items.length > VISIBLE && (
+        <div className="px-5 py-2.5" style={{ borderTop: '1px solid var(--lemma-line)' }}>
           <button
             type="button"
-            onClick={() => setShowAll(true)}
+            onClick={() => setShowAll(!showAll)}
             className="text-xs font-medium"
             style={{ color: 'var(--lemma-primary)' }}
           >
-            Show {hidden} more
-          </button>
-        </div>
-      )}
-      {showAll && items.length > VISIBLE && (
-        <div className="px-5 py-3" style={{ borderTop: '1px solid var(--lemma-line)' }}>
-          <button
-            type="button"
-            onClick={() => setShowAll(false)}
-            className="text-xs font-medium"
-            style={{ color: 'var(--lemma-primary)' }}
-          >
-            Show fewer
+            {showAll ? 'Show fewer' : `Show ${hidden} more`}
           </button>
         </div>
       )}
