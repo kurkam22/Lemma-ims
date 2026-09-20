@@ -32,8 +32,8 @@ export default function TopBar({ companyName }: { companyName: string | null }) 
   }
 
   return (
-    <header className="bg-white border-b border-gray-200 h-14 flex items-center px-6 gap-4">
-      <div className="flex-1 max-w-md relative">
+    <header className="bg-white border-b border-gray-200 h-14 flex items-center pl-14 pr-3 sm:px-6 lg:pl-6 gap-2 sm:gap-4">
+      <div className="hidden md:block flex-1 max-w-md relative">
         <svg
           className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400"
           fill="none"
@@ -51,9 +51,9 @@ export default function TopBar({ companyName }: { companyName: string | null }) 
         />
       </div>
 
-      <div className="flex items-center gap-3 ml-auto">
+      <div className="flex items-center gap-1.5 sm:gap-3 ml-auto">
         {companyName && (
-          <span className="px-2.5 py-1 text-xs font-medium bg-blue-50 text-blue-700 rounded-md whitespace-nowrap">
+          <span className="hidden md:inline px-2.5 py-1 text-xs font-medium bg-blue-50 text-blue-700 rounded-md whitespace-nowrap">
             {companyName}
           </span>
         )}
@@ -82,7 +82,7 @@ export default function TopBar({ companyName }: { companyName: string | null }) 
           type="button"
           title={t('top.help')}
           aria-label={t('top.help')}
-          className="p-1.5 rounded-md text-gray-500 hover:bg-gray-100 hover:text-gray-700"
+          className="hidden sm:block p-1.5 rounded-md text-gray-500 hover:bg-gray-100 hover:text-gray-700"
         >
           <svg
             className="w-4 h-4"
