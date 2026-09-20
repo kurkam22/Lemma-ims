@@ -93,6 +93,15 @@ export type DocumentRow = {
   id: string
   status: string
 }
+export type ExternalAuditRow = {
+  id: string
+  kind: 'initial' | 'surveillance' | 'recertification'
+  planned_date: string
+  status: string
+}
+export type CertificateRow = {
+  expires_on: string
+}
 export type IssueRow = {
   id: string
   issue_no: number
@@ -115,6 +124,9 @@ export type AttentionInput = {
   documents: DocumentRow[]
   /** Reported problems. Optional so older callers keep working. */
   issues?: IssueRow[]
+  /** Audits by the certification body, and the certificate. Optional too. */
+  externalAudits?: ExternalAuditRow[]
+  certificate?: CertificateRow | null
   /** user id -> display name, used for CAPA owners */
   userNames: Record<string, string>
 }
@@ -247,6 +259,48 @@ export function buildAttention(input: AttentionInput): AttentionItem[] {
         daysLeft: days,
         href: '/dashboard/issues',
         actionLabel: 'Open problem',
+      })
+    }
+  }
+
+  // Audits by the certification body (needs preparation, so a longer window)
+  const EXTERNAL_LABEL = {
+    initial: 'Initial certification audit',
+    surveillance: 'Surveillance audit',
+    recertification: 'Recertification audit',
+  } as const
+  for (const a of input.externalAudits ?? []) {
+    if (a.status !== 'planned') continue
+    const days = daysUntil(a.planned_date, today)
+    if (days === null || days > 45) continue
+    items.push({
+      id: `external-${a.id}`,
+      kind: 'audit',
+      title: EXTERNAL_LABEL[a.kind],
+      detail: days < 0 ? `Was planned for ${formatDate(a.planned_date)}. Mark it done or move the date.` : `By your certification body · ${formatDate(a.planned_date)}`,
+      due: a.planned_date,
+      urgency: urgencyFor(days),
+      daysLeft: days,
+      href: '/dashboard/certification',
+      actionLabel: days < 0 ? 'Update audit' : 'Prepare',
+    })
+  }
+
+  // The certificate itself
+  if (input.certificate) {
+    const left = daysUntil(input.certificate.expires_on, today)
+    if (left !== null && left >= 0 && left <= 180) {
+      const hasPlan = (input.externalAudits ?? []).some((a) => a.kind === 'recertification' && a.status !== 'cancelled')
+      items.push({
+        id: 'certificate-ends',
+        kind: 'audit',
+        title: `Your certificate ends ${formatDate(input.certificate.expires_on)}`,
+        detail: hasPlan ? 'A recertification audit is on your calendar.' : 'Plan your recertification audit with your certification body.',
+        due: input.certificate.expires_on,
+        urgency: left <= 30 ? urgencyFor(left) : hasPlan ? 'upcoming' : 'soon',
+        daysLeft: left,
+        href: '/dashboard/certification',
+        actionLabel: hasPlan ? 'Open clock' : 'Add audit',
       })
     }
   }

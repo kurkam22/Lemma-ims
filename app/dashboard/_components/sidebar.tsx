@@ -171,6 +171,8 @@ export default function Sidebar({
       items: [
         { label: 'AI readiness check', href: '/dashboard/compliance-check', icon: 'sparkle' },
         { label: 'Gap assessment', href: '/dashboard/gap-assessment', icon: 'shield' },
+        { label: 'Requirements', href: '/dashboard/requirements', icon: 'layers' },
+        { label: 'Certificate clock', href: '/dashboard/certification', icon: 'shield' },
         { label: 'Internal audits', href: '/dashboard/audits', icon: 'shield' },
         { label: 'Management review', href: '/dashboard/management-review', icon: 'shield' },
         { label: 'Reports', href: '/dashboard/reports', icon: 'chart' },

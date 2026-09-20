@@ -78,4 +78,29 @@ const tr = buildAttention({
 })
 assert.deepEqual(tr.map((r) => r.id).sort(), ['training-failed', 'training-plans'])
 
+// certificate and audits by the certification body
+const cert = buildAttention({
+  ...empty,
+  externalAudits: [
+    { id: 'x1', kind: 'surveillance', planned_date: '2026-10-20', status: 'planned' },
+    { id: 'x2', kind: 'surveillance', planned_date: '2027-10-19', status: 'planned' },
+    { id: 'x3', kind: 'initial', planned_date: '2025-11-15', status: 'done' },
+    { id: 'x4', kind: 'surveillance', planned_date: '2026-09-10', status: 'planned' },
+  ],
+  certificate: { expires_on: '2027-01-10' },
+})
+const cById = Object.fromEntries(cert.map((i) => [i.id, i]))
+assert.ok(cById['external-x1'], 'audit within 45 days shows')
+assert.equal(cById['external-x1'].actionLabel, 'Prepare')
+assert.ok(!cById['external-x2'], 'audit far away hidden')
+assert.ok(!cById['external-x3'], 'done audit hidden')
+assert.equal(cById['external-x4'].urgency, 'overdue')
+assert.equal(cById['external-x4'].actionLabel, 'Update audit')
+assert.equal(cById['certificate-ends'].actionLabel, 'Add audit')
+assert.equal(cById['certificate-ends'].title, 'Your certificate ends 10 Jan 2027')
+const planned = buildAttention({ ...empty, externalAudits: [{ id: 'r', kind: 'recertification', planned_date: '2027-01-05', status: 'planned' }], certificate: { expires_on: '2027-01-10' } })
+assert.equal(planned.find((i) => i.id === 'certificate-ends')!.actionLabel, 'Open clock')
+const far = buildAttention({ ...empty, certificate: { expires_on: '2028-11-14' } })
+assert.equal(far.length, 0, 'certificate far from ending shows nothing')
+
 console.log('attention tests passed')

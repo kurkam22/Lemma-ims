@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
@@ -12,6 +12,11 @@ export default function LoginPage() {
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
+  const [inviteOnly, setInviteOnly] = useState(false)
+
+  useEffect(() => {
+    setInviteOnly(new URLSearchParams(window.location.search).get('invite') === '1')
+  }, [])
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -46,6 +51,15 @@ export default function LoginPage() {
 
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8">
           <h2 className="text-xl font-semibold text-gray-900 mb-6">Sign in</h2>
+
+          {inviteOnly && (
+            <div
+              role="status"
+              className="mb-4 px-4 py-3 rounded-md bg-blue-50 border border-blue-200 text-sm text-blue-800"
+            >
+              Lemma IMS is open by invitation for now. Sign in if you have an account, or contact us for access.
+            </div>
+          )}
 
           {error && (
             <div

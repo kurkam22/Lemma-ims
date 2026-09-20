@@ -113,6 +113,8 @@ export default function DashboardPage() {
         usersRes,
         issuesRes,
         capasRecentRes,
+        externalRes,
+        certRes,
       ] = await Promise.all([
         supabase
           .from('companies')
@@ -180,6 +182,10 @@ export default function DashboardPage() {
           .select('id, description, created_at, closed_at')
           .eq('company_id', cid)
           .or(`created_at.gte.${new Date(Date.now() - 60 * 86400000).toISOString()},closed_at.gte.${new Date(Date.now() - 60 * 86400000).toISOString()}`),
+        // Certificate and audits by the certification body. If those tables do
+        // not exist yet these return an error and are simply left out.
+        supabase.from('external_audits').select('id, kind, planned_date, status').eq('company_id', cid),
+        supabase.from('certificates').select('expires_on').eq('company_id', cid).eq('standard', 'iso9001').maybeSingle(),
       ])
 
       const gaps = gapsRes.data ?? []
@@ -228,6 +234,8 @@ export default function DashboardPage() {
         evidence: evidenceAllRes.data ?? [],
         documents: docsReviewRes.data ?? [],
         issues: issuesRes.error ? [] : issuesRes.data ?? [],
+        externalAudits: externalRes.error ? [] : externalRes.data ?? [],
+        certificate: certRes.error ? null : certRes.data ?? null,
       })
       const issueRows = issuesRes.error ? [] : issuesRes.data ?? []
       const capaRows = capasRecentRes.error ? [] : capasRecentRes.data ?? []
