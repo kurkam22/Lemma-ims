@@ -5,13 +5,17 @@ import ComplianceMetro from '@/app/dashboard/_components/compliance-metro'
 import { DEMO_METRO } from '@/lib/metro-data'
 import AiInsights from '@/app/dashboard/_components/ai-insights'
 import AttentionList from '@/app/dashboard/_components/attention-list'
-import SummaryCard from '@/app/dashboard/_components/summary-card'
-import { getDemoAttention } from '@/lib/demo-attention'
+import ReadinessCard from '@/app/dashboard/_components/readiness-card'
+import StandCard from '@/app/dashboard/_components/stand-card'
+import PulseCard from '@/app/dashboard/_components/pulse-card'
+import ActivityCard from '@/app/dashboard/_components/activity-card'
+import { getDemoActivity, getDemoAttention, getDemoPulse } from '@/lib/demo-attention'
 import {
   DEMO_COMPANY,
   DEMO_JOURNEY,
   DEMO_CHAIN,
   DEMO_AI_INSIGHTS,
+  DEMO_READINESS_BY_AREA,
 } from '@/lib/demo-data'
 
 export const dynamic = 'force-dynamic'
@@ -83,12 +87,18 @@ export default function PublicDemoPage() {
           <div className="lg:col-span-2">
             <AttentionList items={getDemoAttention()} emptyHref="/register" emptyLabel="Start free" />
           </div>
-          <SummaryCard
-            readinessPct={DEMO_COMPANY.readinessPct}
+          <ReadinessCard pct={DEMO_COMPANY.readinessPct} areas={DEMO_READINESS_BY_AREA} />
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
+          <StandCard
             documentsReady={DEMO_COMPANY.documentsReady}
             evidenceConfirmed={DEMO_COMPANY.evidenceConfirmed}
             openCapas={DEMO_COMPANY.openCapa}
+            openIssues={1}
           />
+          <PulseCard rows={getDemoPulse()} />
+          <ActivityCard items={getDemoActivity()} today={new Date()} />
         </div>
 
         <CertificationJourney stages={DEMO_JOURNEY} activeStage={DEMO_COMPANY.currentStage} />

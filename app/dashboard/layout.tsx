@@ -49,7 +49,7 @@ export default async function DashboardLayout({
         userRole={userRow?.role ?? 'member'}
         openCapaCount={openCapaCount}
       />
-      <div className="pl-0 lg:pl-48">
+      <div className="pl-0 lg:pl-56">
         <TopBar companyName={companyName} />
         <main className="p-4 lg:p-6 pt-16 lg:pt-6">{children}</main>
       </div>

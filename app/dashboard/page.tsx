@@ -9,7 +9,10 @@ import ComplianceMetro from '@/app/dashboard/_components/compliance-metro'
 import { DEMO_METRO } from '@/lib/metro-data'
 import AiInsights from '@/app/dashboard/_components/ai-insights'
 import AttentionList from '@/app/dashboard/_components/attention-list'
-import SummaryCard from '@/app/dashboard/_components/summary-card'
+import ReadinessCard from '@/app/dashboard/_components/readiness-card'
+import StandCard from '@/app/dashboard/_components/stand-card'
+import PulseCard from '@/app/dashboard/_components/pulse-card'
+import ActivityCard from '@/app/dashboard/_components/activity-card'
 import {
   DEMO_COMPANY,
   DEMO_JOURNEY,
@@ -17,7 +20,8 @@ import {
   DEMO_AI_INSIGHTS,
   DEMO_READINESS_BY_AREA,
 } from '@/lib/demo-data'
-import { getDemoAttention } from '@/lib/demo-attention'
+import { getDemoActivity, getDemoAttention, getDemoPulse } from '@/lib/demo-attention'
+import { buildActivity, buildPulse, type ActivityItem, type PulseRow } from '@/lib/pulse'
 import { buildAttention, type AttentionItem } from '@/lib/attention'
 
 const SETUP_TOTAL_STEPS = 5
@@ -40,6 +44,9 @@ type DashboardData = {
   openCapas: number
   nextAction: { label: string; due: string | null } | null
   attention: AttentionItem[]
+  openIssues: number
+  pulse: PulseRow[]
+  activity: ActivityItem[]
   readinessByArea: { area: string; pct: number }[]
 }
 
@@ -79,6 +86,9 @@ export default function DashboardPage() {
             openCapas: 0,
             nextAction: null,
             attention: [],
+            openIssues: 0,
+            pulse: [],
+            activity: [],
             readinessByArea: ISO_AREAS.map((a) => ({ area: a.area, pct: 0 })),
           })
           setLoading(false)
@@ -102,6 +112,7 @@ export default function DashboardPage() {
         docsReviewRes,
         usersRes,
         issuesRes,
+        capasRecentRes,
       ] = await Promise.all([
         supabase
           .from('companies')
@@ -160,8 +171,15 @@ export default function DashboardPage() {
         // error and the dashboard simply shows no problems.
         supabase
           .from('issues')
-          .select('id, issue_no, title, status, owner_id, due_date, created_at')
+          .select('id, issue_no, title, status, owner_id, due_date, created_at, closed_at')
           .eq('company_id', cid),
+        // Corrective actions opened or closed in the last 60 days, for the
+        // "Last 30 days" card and recent activity.
+        supabase
+          .from('capas')
+          .select('id, description, created_at, closed_at')
+          .eq('company_id', cid)
+          .or(`created_at.gte.${new Date(Date.now() - 60 * 86400000).toISOString()},closed_at.gte.${new Date(Date.now() - 60 * 86400000).toISOString()}`),
       ])
 
       const gaps = gapsRes.data ?? []
@@ -211,6 +229,12 @@ export default function DashboardPage() {
         documents: docsReviewRes.data ?? [],
         issues: issuesRes.error ? [] : issuesRes.data ?? [],
       })
+      const issueRows = issuesRes.error ? [] : issuesRes.data ?? []
+      const capaRows = capasRecentRes.error ? [] : capasRecentRes.data ?? []
+      const now = new Date()
+      const pulse = buildPulse(now, issueRows, capaRows)
+      const activity = buildActivity(issueRows, capaRows)
+      const openIssues = issueRows.filter((i: { status: string }) => i.status !== 'closed').length
 
       if (!cancelled) {
         setData({
@@ -222,6 +246,9 @@ export default function DashboardPage() {
           openCapas: capas.length,
           nextAction,
           attention,
+          openIssues,
+          pulse,
+          activity,
           readinessByArea,
         })
         setLoading(false)
@@ -272,22 +299,34 @@ export default function DashboardPage() {
               : 'act') as 'plan' | 'do' | 'check' | 'act',
       }
 
+  const hour = new Date().getHours()
+  const greeting = hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening'
+  const todayLabel = new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
+  const areas = usingDemo ? DEMO_READINESS_BY_AREA : data.readinessByArea
+  const pulseRows = usingDemo ? getDemoPulse() : data.pulse
+  const activityItems = usingDemo ? getDemoActivity() : data.activity
+  const openIssues = usingDemo ? 1 : data.openIssues
+
   return (
     <div className="space-y-5 max-w-7xl">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="text-2xl font-semibold" style={{ color: 'var(--lemma-ink)' }}>
-            Your quality system, in one place
+            {usingDemo ? 'Your quality system, in one place' : firstName ? `${greeting}, ${firstName}` : greeting}
           </h1>
           <p className="text-sm mt-1" style={{ color: 'var(--lemma-slate)' }}>
             {usingDemo
               ? `${DEMO_COMPANY.name} (sample company)`
-              : firstName
-                ? `Welcome back, ${firstName}`
-                : 'Welcome back'}
+              : 'Here is what needs your attention and where your quality system stands.'}
           </p>
         </div>
         <div className="flex items-center gap-2">
+          <span
+            className="text-xs px-3 py-1.5 rounded-md"
+            style={{ background: 'var(--lemma-surface)', border: '1px solid var(--lemma-line)', color: 'var(--lemma-slate)' }}
+          >
+            {todayLabel}
+          </span>
           {!usingDemo && (
             <Link
               href="/dashboard/issues?new=1"
@@ -298,15 +337,16 @@ export default function DashboardPage() {
             </Link>
           )}
         </div>
-        {usingDemo && (
-          <span
-            className="text-[11px] font-medium px-2.5 py-1 rounded-full"
-            style={{ background: 'var(--lemma-check-soft)', color: 'var(--lemma-check)' }}
-          >
-            Sample data. Start setup to see your own.
-          </span>
-        )}
       </div>
+
+      {usingDemo && (
+        <div
+          className="text-xs font-medium px-3 py-2 rounded-md"
+          style={{ background: 'var(--lemma-check-soft)', color: 'var(--lemma-check)' }}
+        >
+          Sample data. Start setup to see your own.
+        </div>
+      )}
 
       {!setupComplete && !usingDemo && (
         <SetupBanner step={data.setupStep} total={SETUP_TOTAL_STEPS} />
@@ -320,15 +360,21 @@ export default function DashboardPage() {
             emptyLabel={setupComplete ? 'Run your readiness check' : 'Continue setup'}
           />
         </div>
-        <SummaryCard
-          readinessPct={view.readinessPct}
+        <ReadinessCard pct={view.readinessPct} areas={areas} />
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
+        <StandCard
           documentsReady={view.documentsReady}
           evidenceConfirmed={view.evidenceConfirmed}
           openCapas={view.openCapas}
+          openIssues={openIssues}
         />
+        <PulseCard rows={pulseRows} />
+        <ActivityCard items={activityItems} today={new Date()} />
       </div>
 
-      {usingDemo ? (
+      {usingDemo && (
         <>
           <CertificationJourney stages={DEMO_JOURNEY} activeStage={view.stage} />
           <ComplianceChain rows={DEMO_CHAIN} />
@@ -345,48 +391,12 @@ export default function DashboardPage() {
             </div>
           </details>
         </>
-      ) : (
-        <ReadinessByAreaPanel items={data.readinessByArea} />
       )}
 
       <p className="text-[11px] leading-relaxed px-1" style={{ color: 'var(--lemma-mist)' }}>
         AI outputs are based on company-provided information and require human review.
         Lemma IMS is not a certification body and does not guarantee certification.
       </p>
-    </div>
-  )
-}
-
-function StatCard({
-  label,
-  value,
-  sublabel,
-  tone,
-}: {
-  label: string
-  value: string
-  sublabel?: string
-  tone: 'primary' | 'do' | 'check' | 'danger'
-}) {
-  const colorMap = {
-    primary: 'var(--lemma-primary)',
-    do: 'var(--lemma-do)',
-    check: 'var(--lemma-check)',
-    danger: 'var(--lemma-danger)',
-  } as const
-  return (
-    <div className="lemma-card p-3.5">
-      <div className="text-[11px] font-medium uppercase tracking-wide" style={{ color: 'var(--lemma-mist)' }}>
-        {label}
-      </div>
-      <div className="text-2xl font-semibold mt-1" style={{ color: colorMap[tone] }}>
-        {value}
-      </div>
-      {sublabel && (
-        <div className="text-[11px] mt-0.5 truncate" style={{ color: 'var(--lemma-slate)' }}>
-          {sublabel}
-        </div>
-      )}
     </div>
   )
 }
@@ -414,40 +424,6 @@ function SetupBanner({ step, total }: { step: number; total: number }) {
         >
           Resume setup →
         </Link>
-      </div>
-    </div>
-  )
-}
-
-function ReadinessByAreaPanel({ items }: { items: { area: string; pct: number }[] }) {
-  return (
-    <div className="bg-white border border-gray-200 rounded-lg p-5">
-      <h2 className="text-sm font-semibold text-gray-900 mb-4">Readiness by area</h2>
-      <div className="space-y-3">
-        {items.map((a) => {
-          const barColor =
-            a.pct >= 75
-              ? 'bg-emerald-500'
-              : a.pct >= 50
-                ? 'bg-blue-500'
-                : a.pct >= 25
-                  ? 'bg-amber-500'
-                  : 'bg-gray-300'
-          return (
-            <div key={a.area}>
-              <div className="flex justify-between text-xs mb-1">
-                <span className="text-gray-700">{a.area}</span>
-                <span className="font-medium text-gray-900">{a.pct}%</span>
-              </div>
-              <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
-                <div
-                  className={`h-full ${barColor} transition-all`}
-                  style={{ width: `${a.pct}%` }}
-                />
-              </div>
-            </div>
-          )
-        })}
       </div>
     </div>
   )

@@ -6,6 +6,7 @@
 // They run through the same buildAttention() logic as real company data.
 
 import { buildAttention, type AttentionItem } from '@/lib/attention'
+import { buildActivity, buildPulse, type ActivityItem, type PulseRow } from '@/lib/pulse'
 
 function iso(today: Date, plusDays: number): string {
   const d = new Date(today.getFullYear(), today.getMonth(), today.getDate() + plusDays)
@@ -73,4 +74,35 @@ export function getDemoAttention(today: Date = new Date()): AttentionItem[] {
       },
     ],
   })
+}
+
+function stamp(today: Date, minusDays: number): string {
+  const d = new Date(today.getFullYear(), today.getMonth(), today.getDate() - minusDays, 9, 0, 0)
+  return d.toISOString()
+}
+
+// Sample records behind the demo's "Last 30 days" and "Recent activity".
+function demoRows(today: Date) {
+  return {
+    issues: [
+      { id: 'a', issue_no: 9, title: 'Label mismatch on carton', created_at: stamp(today, 20), closed_at: stamp(today, 15) },
+      { id: 'b', issue_no: 10, title: 'Late delivery from a supplier', created_at: stamp(today, 8), closed_at: stamp(today, 3) },
+      { id: 'c', issue_no: 11, title: 'Damaged packaging on a shipment', created_at: stamp(today, 1), closed_at: null },
+      { id: 'd', issue_no: 8, title: 'Wrong part number on a drawing', created_at: stamp(today, 45), closed_at: stamp(today, 40) },
+    ],
+    capas: [
+      { id: 'x', description: 'Packaging procedure updated', created_at: stamp(today, 25), closed_at: stamp(today, 2) },
+      { id: 'y', description: 'Supplier re-evaluation', created_at: stamp(today, 5), closed_at: null },
+    ],
+  }
+}
+
+export function getDemoPulse(today: Date = new Date()): PulseRow[] {
+  const r = demoRows(today)
+  return buildPulse(today, r.issues, r.capas)
+}
+
+export function getDemoActivity(today: Date = new Date()): ActivityItem[] {
+  const r = demoRows(today)
+  return buildActivity(r.issues, r.capas)
 }

@@ -106,6 +106,8 @@ export default function Sidebar({
 }) {
   const pathname = usePathname()
   const [mobileOpen, setMobileOpen] = useState(false)
+  // Which menu groups the person opened or closed by hand.
+  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({})
 
   useEffect(() => {
     setMobileOpen(false)
@@ -190,6 +192,21 @@ export default function Sidebar({
     },
   ]
 
+  // Hide duplicate menu items. Two items that open the same page show once
+  // (the first one wins). Nothing is deleted: the pages still exist and the
+  // hidden entries stay in the list above.
+  const seenHrefs = new Set<string>()
+  const menu = sections
+    .map((section) => ({
+      ...section,
+      items: section.items.filter((item) => {
+        if (seenHrefs.has(item.href)) return false
+        seenHrefs.add(item.href)
+        return true
+      }),
+    }))
+    .filter((section) => section.items.length > 0)
+
   return (
     <>
       <button
@@ -211,7 +228,7 @@ export default function Sidebar({
       )}
 
       <aside
-        className={`fixed inset-y-0 left-0 w-60 lg:w-48 flex flex-col z-50 transition-transform duration-200 ${
+        className={`fixed inset-y-0 left-0 w-60 lg:w-56 flex flex-col z-50 transition-transform duration-200 ${
           mobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
         }`}
         style={{ background: 'var(--lemma-surface)', borderRight: '1px solid var(--lemma-line)' }}
@@ -237,14 +254,41 @@ export default function Sidebar({
         </div>
 
       <nav className="flex-1 overflow-y-auto px-2 py-3 text-xs">
-        {sections.map((section, idx) => (
-          <div key={idx} className="mb-3">
+        {menu.map((section, idx) => {
+          const holdsCurrentPage = section.items.some((item) => {
+            const base = item.href.split('?')[0]
+            return (
+              (base !== '/dashboard' && (pathname === base || pathname.startsWith(base + '/'))) ||
+              (item.substeps ?? []).some((sub) => pathname === sub.href)
+            )
+          })
+          const expanded = !section.title || (openGroups[section.title] ?? holdsCurrentPage)
+          const groupBadge = section.items.reduce((n, item) => n + (item.badgeCount ?? 0), 0)
+          return (
+          <div key={idx} className="mb-2">
             {section.title && (
-              <div className="px-2 mb-1 text-[10px] font-semibold tracking-wider" style={{ color: 'var(--lemma-mist)' }}>
-                {section.title}
-              </div>
+              <button
+                type="button"
+                aria-expanded={expanded}
+                onClick={() => setOpenGroups({ ...openGroups, [section.title as string]: !expanded })}
+                className="w-full flex items-center justify-between px-2 py-1.5 rounded-md text-[10px] font-semibold tracking-wider"
+                style={{ color: 'var(--lemma-mist)' }}
+              >
+                <span>{section.title}</span>
+                <span className="flex items-center gap-1.5">
+                  {!expanded && groupBadge > 0 && (
+                    <span
+                      className="text-[10px] font-semibold px-1.5 py-0.5 rounded"
+                      style={{ background: 'var(--lemma-danger-soft)', color: 'var(--lemma-danger)' }}
+                    >
+                      {groupBadge}
+                    </span>
+                  )}
+                  <span aria-hidden style={{ fontSize: 12 }}>{expanded ? '−' : '+'}</span>
+                </span>
+              </button>
             )}
-            {section.items.map((item) => {
+            {expanded && section.items.map((item) => {
               const active = pathname === item.href
               return (
                 <div key={item.href + item.label}>
@@ -291,22 +335,9 @@ export default function Sidebar({
               )
             })}
           </div>
-        ))}
+          )
+        })}
       </nav>
-
-      <div className="px-3 py-3" style={{ borderTop: '1px solid var(--lemma-line)' }}>
-        <button
-          type="button"
-          className="w-full text-left rounded-lg px-3 py-2.5 transition"
-          style={{ background: 'var(--lemma-primary-soft)', border: '1px solid var(--lemma-primary)' }}
-        >
-          <div className="flex items-center gap-1.5" style={{ color: 'var(--lemma-primary)' }}>
-            <Icon name="sparkle" />
-            <span className="text-xs font-semibold">Ask Lemma AI</span>
-          </div>
-          <p className="text-[10px] mt-0.5" style={{ color: 'var(--lemma-slate)' }}>Get instant answers</p>
-        </button>
-      </div>
 
       <div className="px-3 py-3" style={{ borderTop: '1px solid var(--lemma-line)' }}>
         <div className="text-xs font-medium truncate" style={{ color: 'var(--lemma-ink)' }}>{userName}</div>
