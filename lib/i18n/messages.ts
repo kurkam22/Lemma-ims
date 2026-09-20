@@ -282,6 +282,16 @@ export const en = {
   'req.empty': 'Nothing is answered yet. Start on the Gap assessment and the squares will fill in.',
   'req.emptyLink': 'Open Gap assessment',
 
+  // ---- entrance ---------------------------------------------------------
+  'enter.title': 'Enter the Lemma IMS demo',
+  'enter.sub': 'Use the ID and password you were given.',
+  'enter.id': 'ID',
+  'enter.password': 'Password',
+  'enter.submit': 'Enter',
+  'enter.error': 'The ID or password is not correct.',
+  'enter.closed': 'The demo is closed right now.',
+  'enter.help': 'No ID? Ask the person who invited you.',
+
   // ---- sample workspace (empty companies and the demo) ----------------
   'demo.badge': 'Live demo · sample data',
   'demo.signIn': 'Sign in',
@@ -601,6 +611,16 @@ export const ko: Record<MessageKey, string> = {
   'req.pageIntro': '요구사항마다 칸이 하나씩 있으며, 표준의 일곱 개 부분으로 묶여 있습니다. 칸을 선택하면 완료된 것, 빠진 것, 다음에 할 일을 볼 수 있습니다.',
   'req.empty': '아직 답변한 항목이 없습니다. 갭 분석을 시작하면 칸이 채워집니다.',
   'req.emptyLink': '갭 분석 열기',
+
+  // ---- entrance ---------------------------------------------------------
+  'enter.title': 'Lemma IMS 데모 입장',
+  'enter.sub': '전달받은 아이디와 비밀번호를 입력하세요.',
+  'enter.id': '아이디',
+  'enter.password': '비밀번호',
+  'enter.submit': '입장',
+  'enter.error': '아이디 또는 비밀번호가 올바르지 않습니다.',
+  'enter.closed': '지금은 데모가 닫혀 있습니다.',
+  'enter.help': '아이디가 없으신가요? 초대해 주신 분께 문의하세요.',
 
   // ---- sample workspace (empty companies and the demo) ----------------
   'demo.badge': '라이브 데모 · 샘플 데이터',
