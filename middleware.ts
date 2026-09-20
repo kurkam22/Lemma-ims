@@ -15,6 +15,8 @@ function isPublicPath(path: string) {
 //    DEMO_USER + DEMO_PASSWORD). With no account set, the demo stays CLOSED
 //    (fail closed, never open by accident). A browser pop-up login (HTTP
 //    Basic) still works too, for tools.
+//    To open the demo to everyone, set DEMO_PUBLIC=true. Remove it (or set it
+//    to anything else) to close it again.
 // 2) /register is closed unless REGISTRATION_OPEN=true. This only hides the
 //    page. The real lock is switching off "Allow new users to sign up" in
 //    Supabase (Authentication settings), because the sign-up call itself is
@@ -22,6 +24,7 @@ function isPublicPath(path: string) {
 
 async function checkDemoAccess(request: NextRequest): Promise<NextResponse | null> {
   if (process.env.NODE_ENV !== 'production') return null // local testing stays easy
+  if (process.env.DEMO_PUBLIC === 'true') return null // switched on: the demo is open to everyone
   const accounts = parseAccounts(process.env)
   const url = request.nextUrl.clone()
   url.search = ''

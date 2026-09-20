@@ -1,3 +1,4 @@
+import { redirect } from 'next/navigation'
 import { getLocale } from '@/lib/i18n/server'
 import { translate } from '@/lib/i18n'
 import LanguageSwitch from '@/app/_components/language-switch'
@@ -9,6 +10,8 @@ export const metadata = { title: 'Enter' }
 // The entrance to the private demo. A plain form: no scripts needed, so it
 // works in every browser, including the browsers inside phone apps.
 export default function EnterPage({ searchParams }: { searchParams: { error?: string; closed?: string } }) {
+  // When the demo is open to everyone there is nothing to enter.
+  if (process.env.DEMO_PUBLIC === 'true') redirect('/demo')
   const locale = getLocale()
   const t = (k: Parameters<typeof translate>[1]) => translate(locale, k)
   const closed = searchParams.closed === '1'
