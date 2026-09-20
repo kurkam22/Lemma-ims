@@ -113,7 +113,10 @@ export default function Sidebar({
 
   const sections: NavSection[] = [
     {
-      items: [{ label: 'Dashboard', href: '/dashboard', icon: 'home' }],
+      items: [
+        { label: 'Dashboard', href: '/dashboard', icon: 'home' },
+        { label: 'Report a problem', href: '/dashboard/issues?new=1', icon: 'shield' },
+      ],
     },
     {
       title: 'START / SETUP',
@@ -175,8 +178,8 @@ export default function Sidebar({
     {
       title: 'IMPROVE',
       items: [
-        { label: 'Issues & nonconformities', href: '/dashboard/capa', icon: 'shield', badgeCount: openCapaCount },
-        { label: 'Corrective actions', href: '/dashboard/capa', icon: 'shield' },
+        { label: 'Problems reported', href: '/dashboard/issues', icon: 'shield' },
+        { label: 'Corrective actions', href: '/dashboard/capa', icon: 'shield', badgeCount: openCapaCount },
         { label: 'Improvement actions', href: '/dashboard/reports', icon: 'chart' },
         { label: 'Consultant review', href: '/dashboard/consultant-review', icon: 'chart' },
       ],

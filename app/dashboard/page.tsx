@@ -8,14 +8,16 @@ import ComplianceChain from '@/app/dashboard/_components/compliance-chain'
 import ComplianceMetro from '@/app/dashboard/_components/compliance-metro'
 import { DEMO_METRO } from '@/lib/metro-data'
 import AiInsights from '@/app/dashboard/_components/ai-insights'
+import AttentionList from '@/app/dashboard/_components/attention-list'
 import {
   DEMO_COMPANY,
   DEMO_JOURNEY,
   DEMO_CHAIN,
   DEMO_AI_INSIGHTS,
   DEMO_READINESS_BY_AREA,
-  DEMO_PRIORITIES,
 } from '@/lib/demo-data'
+import { getDemoAttention } from '@/lib/demo-attention'
+import { buildAttention, type AttentionItem } from '@/lib/attention'
 import { READINESS_DISCLAIMER } from '@/lib/readiness'
 
 const SETUP_TOTAL_STEPS = 5
@@ -29,15 +31,6 @@ const ISO_AREAS: { area: string; prefixes: string[] }[] = [
   { area: 'Improvement', prefixes: ['10.'] },
 ]
 
-type Severity = 'low' | 'medium' | 'high' | 'critical'
-
-type Priority = {
-  id: string
-  title: string
-  due?: string | null
-  severity?: Severity
-}
-
 type DashboardData = {
   userName: string
   setupStep: number
@@ -46,7 +39,7 @@ type DashboardData = {
   evidenceConfirmed: number
   openCapas: number
   nextAction: { label: string; due: string | null } | null
-  priorities: Priority[]
+  attention: AttentionItem[]
   readinessByArea: { area: string; pct: number }[]
 }
 
@@ -85,13 +78,7 @@ export default function DashboardPage() {
             evidenceConfirmed: 0,
             openCapas: 0,
             nextAction: null,
-            priorities: [
-              { id: 'setup-1', title: 'Complete company setup to get started' },
-              { id: 'setup-2', title: 'Upload your existing policies and procedures' },
-              { id: 'setup-3', title: 'Invite team members' },
-              { id: 'setup-4', title: 'Define processes and goals' },
-              { id: 'setup-5', title: 'Run your first gap assessment' },
-            ],
+            attention: [],
             readinessByArea: ISO_AREAS.map((a) => ({ area: a.area, pct: 0 })),
           })
           setLoading(false)
@@ -100,7 +87,22 @@ export default function DashboardPage() {
       }
 
       const cid = userRow.company_id
-      const [companyRes, docsRes, evidenceRes, capasRes, gapsRes] = await Promise.all([
+      const [
+        companyRes,
+        docsRes,
+        evidenceRes,
+        capasRes,
+        gapsRes,
+        suppliersRes,
+        auditsRes,
+        trainingsRes,
+        risksRes,
+        remindersRes,
+        evidenceAllRes,
+        docsReviewRes,
+        usersRes,
+        issuesRes,
+      ] = await Promise.all([
         supabase
           .from('companies')
           .select('setup_step, target_date')
@@ -118,11 +120,48 @@ export default function DashboardPage() {
           .eq('user_confirmed', true),
         supabase
           .from('capas')
-          .select('id, description, severity, due_date, status')
+          .select('id, description, severity, due_date, status, responsible_id')
           .eq('company_id', cid)
           .in('status', ['open', 'in_progress'])
           .order('due_date', { ascending: true, nullsFirst: false }),
         supabase.from('gap_answers').select('clause_id, status').eq('company_id', cid),
+        supabase
+          .from('suppliers')
+          .select('id, name, cert_expiry, approval_status')
+          .eq('company_id', cid),
+        supabase
+          .from('audits')
+          .select('id, title, department, scheduled_date, status')
+          .eq('company_id', cid),
+        supabase
+          .from('trainings')
+          .select('id, kind, module, employee_name, scheduled_month, result, status')
+          .eq('company_id', cid),
+        supabase
+          .from('risks')
+          .select('id, status, kind, treatment, review_date')
+          .eq('company_id', cid),
+        supabase
+          .from('reminders')
+          .select('id, title, kind, due_date, status')
+          .eq('company_id', cid)
+          .eq('status', 'open'),
+        supabase
+          .from('evidence')
+          .select('id, status, expiry_date')
+          .eq('company_id', cid),
+        supabase
+          .from('documents')
+          .select('id, status')
+          .eq('company_id', cid)
+          .eq('status', 'in_review'),
+        supabase.from('users').select('id, full_name').eq('company_id', cid),
+        // If the problems table has not been created yet, this returns an
+        // error and the dashboard simply shows no problems.
+        supabase
+          .from('issues')
+          .select('id, issue_no, title, status, owner_id, due_date, created_at')
+          .eq('company_id', cid),
       ])
 
       const gaps = gapsRes.data ?? []
@@ -147,12 +186,31 @@ export default function DashboardPage() {
             ? { label: 'Target certification date', due: companyRes.data.target_date }
             : null
 
-      const priorities: Priority[] = capas.slice(0, 5).map((c) => ({
-        id: c.id,
-        title: c.description ?? 'Open CAPA',
-        due: c.due_date,
-        severity: c.severity as Severity,
-      }))
+      const userNames: Record<string, string> = {}
+      for (const u of usersRes.data ?? []) {
+        if (u.full_name) userNames[u.id] = u.full_name
+      }
+
+      const attention = buildAttention({
+        today: new Date(),
+        userNames,
+        capas: (capasRes.data ?? []).map((c) => ({
+          id: c.id,
+          description: c.description,
+          severity: c.severity,
+          status: c.status,
+          due_date: c.due_date,
+          responsible_id: c.responsible_id,
+        })),
+        audits: auditsRes.data ?? [],
+        suppliers: suppliersRes.data ?? [],
+        trainings: trainingsRes.data ?? [],
+        risks: risksRes.data ?? [],
+        reminders: remindersRes.data ?? [],
+        evidence: evidenceAllRes.data ?? [],
+        documents: docsReviewRes.data ?? [],
+        issues: issuesRes.error ? [] : issuesRes.data ?? [],
+      })
 
       if (!cancelled) {
         setData({
@@ -163,7 +221,7 @@ export default function DashboardPage() {
           evidenceConfirmed: evidenceRes.count ?? 0,
           openCapas: capas.length,
           nextAction,
-          priorities,
+          attention,
           readinessByArea,
         })
         setLoading(false)
@@ -188,15 +246,16 @@ export default function DashboardPage() {
   const firstName = data.userName.split(' ')[0]
   const setupComplete = data.setupStep >= SETUP_TOTAL_STEPS
 
-  const usingDemo = data.readinessPct === 0 && data.documentsReady === 0
+  // Show the sample workspace only when the company has no data of its own yet.
+  const usingDemo =
+    data.readinessPct === 0 && data.documentsReady === 0 && data.attention.length === 0
+  const attention = usingDemo ? getDemoAttention() : data.attention
   const view = usingDemo
     ? {
         readinessPct: DEMO_COMPANY.readinessPct,
         documentsReady: DEMO_COMPANY.documentsReady,
         evidenceConfirmed: DEMO_COMPANY.evidenceConfirmed,
         openCapas: DEMO_COMPANY.openCapa,
-        nextLabel: DEMO_COMPANY.nextActionLabel,
-        nextDue: DEMO_COMPANY.nextActionDue,
         stage: DEMO_COMPANY.currentStage as 'plan' | 'do' | 'check' | 'act',
       }
     : {
@@ -204,8 +263,6 @@ export default function DashboardPage() {
         documentsReady: data.documentsReady,
         evidenceConfirmed: data.evidenceConfirmed,
         openCapas: data.openCapas,
-        nextLabel: data.nextAction?.label ?? '—',
-        nextDue: data.nextAction?.due ?? null,
         stage: (!setupComplete
           ? 'plan'
           : data.documentsReady === 0
@@ -220,20 +277,33 @@ export default function DashboardPage() {
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="text-2xl font-semibold" style={{ color: 'var(--lemma-ink)' }}>
-            ISO command centre
+            Your quality system, in one place
           </h1>
           <p className="text-sm mt-1" style={{ color: 'var(--lemma-slate)' }}>
-            {usingDemo ? DEMO_COMPANY.name : firstName ? `Welcome back, ${firstName}` : 'Welcome back'}
-            {' · '}
-            {usingDemo ? DEMO_COMPANY.standard : 'Your certification readiness'}
+            {usingDemo
+              ? `${DEMO_COMPANY.name} (sample company)`
+              : firstName
+                ? `Welcome back, ${firstName}`
+                : 'Welcome back'}
           </p>
+        </div>
+        <div className="flex items-center gap-2">
+          {!usingDemo && (
+            <Link
+              href="/dashboard/issues?new=1"
+              className="text-sm font-medium px-4 py-2 rounded-md"
+              style={{ background: 'var(--lemma-primary)', color: '#fff' }}
+            >
+              Report a problem
+            </Link>
+          )}
         </div>
         {usingDemo && (
           <span
             className="text-[11px] font-medium px-2.5 py-1 rounded-full"
             style={{ background: 'var(--lemma-check-soft)', color: 'var(--lemma-check)' }}
           >
-            Sample data — start setup to see your own
+            Sample data. Start setup to see your own.
           </span>
         )}
       </div>
@@ -242,40 +312,43 @@ export default function DashboardPage() {
         <SetupBanner step={data.setupStep} total={SETUP_TOTAL_STEPS} />
       )}
 
-      <CertificationJourney stages={DEMO_JOURNEY} activeStage={view.stage} />
+      <AttentionList
+        items={attention}
+        emptyHref={setupComplete ? '/dashboard/compliance-check' : '/dashboard/setup'}
+        emptyLabel={setupComplete ? 'Run your readiness check' : 'Continue setup'}
+      />
 
-      <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <StatCard label="Overall readiness" value={`${view.readinessPct}%`} tone="primary" />
-        <StatCard label="Documents ready" value={view.documentsReady.toString()} tone="do" />
+        <StatCard label="Documents approved" value={view.documentsReady.toString()} tone="do" />
         <StatCard label="Evidence confirmed" value={view.evidenceConfirmed.toString()} tone="do" />
-        <StatCard label="Open CAPA" value={view.openCapas.toString()} tone="danger" />
-        <StatCard
-          label="Next action due"
-          value={view.nextDue ? formatDate(view.nextDue) : '—'}
-          sublabel={view.nextLabel}
-          tone="check"
-        />
+        <StatCard label="Open corrective actions" value={view.openCapas.toString()} tone="danger" />
       </div>
 
       <p className="text-[11px] leading-relaxed" style={{ color: 'var(--lemma-mist)' }}>
         {READINESS_DISCLAIMER}
       </p>
 
-      <ComplianceChain rows={DEMO_CHAIN} />
-
-      <ComplianceMetro clauses={DEMO_METRO} />
-
-      <AiInsights insights={DEMO_AI_INSIGHTS} />
-
-      <DoThisNow
-        priority={usingDemo ? DEMO_PRIORITIES[0] : data.priorities[0]}
-        fallbackHref={setupComplete ? '/dashboard/compliance-check' : '/dashboard/setup'}
-      />
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-        <PrioritiesPanel items={usingDemo ? DEMO_PRIORITIES : data.priorities} />
-        <ReadinessByAreaPanel items={usingDemo ? DEMO_READINESS_BY_AREA : data.readinessByArea} />
-      </div>
+      {usingDemo ? (
+        <>
+          <CertificationJourney stages={DEMO_JOURNEY} activeStage={view.stage} />
+          <ComplianceChain rows={DEMO_CHAIN} />
+          <AiInsights insights={DEMO_AI_INSIGHTS} />
+          <details className="lemma-card">
+            <summary
+              className="px-5 py-3 text-sm font-medium cursor-pointer"
+              style={{ color: 'var(--lemma-ink)' }}
+            >
+              System overview (optional)
+            </summary>
+            <div className="px-2 pb-2">
+              <ComplianceMetro clauses={DEMO_METRO} />
+            </div>
+          </details>
+        </>
+      ) : (
+        <ReadinessByAreaPanel items={data.readinessByArea} />
+      )}
 
       <p className="text-[11px] leading-relaxed px-1" style={{ color: 'var(--lemma-mist)' }}>
         AI outputs are based on company-provided information and require human review.
@@ -319,39 +392,6 @@ function StatCard({
   )
 }
 
-function KPICard({
-  label,
-  value,
-  sublabel,
-  accent,
-}: {
-  label: string
-  value: string
-  sublabel?: string
-  accent: 'blue' | 'indigo' | 'emerald' | 'red' | 'amber'
-}) {
-  const accentMap: Record<typeof accent, string> = {
-    blue: 'text-blue-600',
-    indigo: 'text-indigo-600',
-    emerald: 'text-emerald-600',
-    red: 'text-red-600',
-    amber: 'text-amber-600',
-  }
-  return (
-    <div className="bg-white border border-gray-200 rounded-lg p-4">
-      <div className="text-xs font-medium text-gray-500 uppercase tracking-wide">
-        {label}
-      </div>
-      <div className={`text-2xl font-semibold mt-2 ${accentMap[accent]}`}>{value}</div>
-      {sublabel && (
-        <div className="text-xs text-gray-500 mt-1 truncate" title={sublabel}>
-          {sublabel}
-        </div>
-      )}
-    </div>
-  )
-}
-
 function SetupBanner({ step, total }: { step: number; total: number }) {
   const pct = Math.round((step / total) * 100)
   return (
@@ -377,98 +417,6 @@ function SetupBanner({ step, total }: { step: number; total: number }) {
         </Link>
       </div>
     </div>
-  )
-}
-
-function routeForPriority(title: string): string {
-  const t = title.toLowerCase()
-  if (t.includes('training') || t.includes('competence')) return '/dashboard/training'
-  if (t.includes('supplier')) return '/dashboard/suppliers'
-  if (t.includes('audit')) return '/dashboard/audits'
-  if (t.includes('capa') || t.includes('complaint') || t.includes('nonconform'))
-    return '/dashboard/capa'
-  if (t.includes('objective') || t.includes('kpi') || t.includes('goal'))
-    return '/dashboard/setup/step4'
-  if (t.includes('risk')) return '/dashboard/risk'
-  if (t.includes('evidence') || t.includes('record')) return '/dashboard/evidence'
-  if (t.includes('document') || t.includes('polic') || t.includes('procedure'))
-    return '/dashboard/required-documents'
-  if (t.includes('review')) return '/dashboard/management-review'
-  return '/dashboard/compliance-check'
-}
-
-function DoThisNow({
-  priority,
-  fallbackHref,
-}: {
-  priority?: Priority
-  fallbackHref: string
-}) {
-  const label = priority ? priority.title : 'Run your readiness check'
-  const href = priority ? routeForPriority(priority.title) : fallbackHref
-  return (
-    <Link
-      href={href}
-      className="flex items-center justify-between gap-4 bg-blue-600 hover:bg-blue-700 transition rounded-xl px-5 py-4 text-white shadow-sm"
-    >
-      <div className="min-w-0">
-        <div className="text-[11px] font-semibold uppercase tracking-wide text-blue-100">
-          Do this now
-        </div>
-        <div className="text-sm sm:text-base font-medium truncate">{label}</div>
-      </div>
-      <span className="shrink-0 text-xl leading-none" aria-hidden>
-        →
-      </span>
-    </Link>
-  )
-}
-
-function PrioritiesPanel({ items }: { items: Priority[] }) {
-  return (
-    <div className="bg-white border border-gray-200 rounded-lg p-5">
-      <h2 className="text-sm font-semibold text-gray-900 mb-4">What to do next</h2>
-      {items.length === 0 ? (
-        <div className="text-sm text-gray-500 py-6 text-center">
-          Nothing urgent. Start your gap assessment to surface priorities.
-        </div>
-      ) : (
-        <ol className="space-y-3">
-          {items.map((p, i) => (
-            <li key={p.id} className="flex items-start gap-3">
-              <span className="flex-shrink-0 w-5 h-5 rounded-full bg-gray-100 text-gray-700 text-xs font-semibold flex items-center justify-center mt-0.5">
-                {i + 1}
-              </span>
-              <div className="flex-1 min-w-0">
-                <div className="text-sm text-gray-900 truncate">{p.title}</div>
-                {p.due && (
-                  <div className="text-xs text-gray-500 mt-0.5">
-                    Due {formatDate(p.due)}
-                  </div>
-                )}
-              </div>
-              {p.severity && <SeverityBadge severity={p.severity} />}
-            </li>
-          ))}
-        </ol>
-      )}
-    </div>
-  )
-}
-
-function SeverityBadge({ severity }: { severity: Severity }) {
-  const styles: Record<Severity, string> = {
-    low: 'bg-gray-100 text-gray-600',
-    medium: 'bg-amber-50 text-amber-700',
-    high: 'bg-red-50 text-red-700',
-    critical: 'bg-red-100 text-red-800',
-  }
-  return (
-    <span
-      className={`text-[10px] font-semibold px-2 py-0.5 rounded uppercase tracking-wide ${styles[severity]}`}
-    >
-      {severity}
-    </span>
   )
 }
 
@@ -544,14 +492,4 @@ function DashboardSkeleton() {
       </div>
     </div>
   )
-}
-
-function formatDate(iso: string): string {
-  const d = new Date(iso)
-  if (Number.isNaN(d.getTime())) return iso
-  return d.toLocaleDateString(undefined, {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-  })
 }

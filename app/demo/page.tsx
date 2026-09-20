@@ -5,12 +5,16 @@ import ComplianceMetro from '@/app/dashboard/_components/compliance-metro'
 import { DEMO_METRO } from '@/lib/metro-data'
 import { READINESS_DISCLAIMER } from '@/lib/readiness'
 import AiInsights from '@/app/dashboard/_components/ai-insights'
+import AttentionList from '@/app/dashboard/_components/attention-list'
+import { getDemoAttention } from '@/lib/demo-attention'
 import {
   DEMO_COMPANY,
   DEMO_JOURNEY,
   DEMO_CHAIN,
   DEMO_AI_INSIGHTS,
 } from '@/lib/demo-data'
+
+export const dynamic = 'force-dynamic'
 
 export const metadata = {
   title: 'Live demo · Lemma IMS',
@@ -23,6 +27,7 @@ function formatDate(d: string) {
     return new Date(d).toLocaleDateString('en-GB', {
       day: 'numeric',
       month: 'short',
+      year: 'numeric',
     })
   } catch {
     return d
@@ -32,15 +37,9 @@ function formatDate(d: string) {
 export default function PublicDemoPage() {
   const stats = [
     { label: 'Overall readiness', value: `${DEMO_COMPANY.readinessPct}%`, tone: 'var(--lemma-primary)' },
-    { label: 'Documents ready', value: String(DEMO_COMPANY.documentsReady), tone: 'var(--lemma-do)' },
+    { label: 'Documents approved', value: String(DEMO_COMPANY.documentsReady), tone: 'var(--lemma-do)' },
     { label: 'Evidence confirmed', value: String(DEMO_COMPANY.evidenceConfirmed), tone: 'var(--lemma-do)' },
-    { label: 'Open CAPA', value: String(DEMO_COMPANY.openCapa), tone: 'var(--lemma-danger)' },
-    {
-      label: 'Next action due',
-      value: formatDate(DEMO_COMPANY.nextActionDue),
-      sub: DEMO_COMPANY.nextActionLabel,
-      tone: 'var(--lemma-check)',
-    },
+    { label: 'Open corrective actions', value: String(DEMO_COMPANY.openCapa), tone: 'var(--lemma-danger)' },
   ]
 
   return (
@@ -80,16 +79,18 @@ export default function PublicDemoPage() {
       <main className="p-4 lg:p-6 max-w-7xl mx-auto space-y-5">
         <div>
           <h1 className="text-2xl font-semibold" style={{ color: 'var(--lemma-ink)' }}>
-            ISO command centre
+            Your quality system, in one place
           </h1>
           <p className="text-sm mt-1" style={{ color: 'var(--lemma-slate)' }}>
             {DEMO_COMPANY.name} · {DEMO_COMPANY.standard} · this is a sample workspace you can explore freely
           </p>
         </div>
 
+        <AttentionList items={getDemoAttention()} emptyHref="/register" emptyLabel="Start free" />
+
         <CertificationJourney stages={DEMO_JOURNEY} activeStage={DEMO_COMPANY.currentStage} />
 
-        <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
           {stats.map((s) => (
             <div key={s.label} className="lemma-card p-3.5">
               <div className="text-[11px] font-medium uppercase tracking-wide" style={{ color: 'var(--lemma-mist)' }}>
@@ -98,11 +99,6 @@ export default function PublicDemoPage() {
               <div className="text-2xl font-semibold mt-1" style={{ color: s.tone }}>
                 {s.value}
               </div>
-              {s.sub && (
-                <div className="text-[11px] mt-0.5 truncate" style={{ color: 'var(--lemma-slate)' }}>
-                  {s.sub}
-                </div>
-              )}
             </div>
           ))}
         </div>
@@ -113,9 +109,19 @@ export default function PublicDemoPage() {
 
         <ComplianceChain rows={DEMO_CHAIN} />
 
-        <ComplianceMetro clauses={DEMO_METRO} />
-
         <AiInsights insights={DEMO_AI_INSIGHTS} />
+
+        <details className="lemma-card">
+          <summary
+            className="px-5 py-3 text-sm font-medium cursor-pointer"
+            style={{ color: 'var(--lemma-ink)' }}
+          >
+            System overview (optional)
+          </summary>
+          <div className="px-2 pb-2">
+            <ComplianceMetro clauses={DEMO_METRO} />
+          </div>
+        </details>
 
         <div
           className="lemma-card p-5 flex flex-col sm:flex-row items-center justify-between gap-3"
