@@ -2,9 +2,12 @@
 
 import { useState, useRef, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import { useT } from '@/lib/i18n/provider'
+import LanguageSwitch from '@/app/_components/language-switch'
 import { createClient } from '@/lib/supabase/client'
 
 export default function TopBar({ companyName }: { companyName: string | null }) {
+  const { t } = useT()
   const [menuOpen, setMenuOpen] = useState(false)
   const [signingOut, setSigningOut] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
@@ -43,7 +46,7 @@ export default function TopBar({ companyName }: { companyName: string | null }) 
         </svg>
         <input
           type="search"
-          placeholder="Search documents, clauses, evidence…"
+          placeholder={t('top.search')}
           className="w-full pl-9 pr-3 py-1.5 text-sm bg-gray-50 border border-gray-200 rounded-md focus:bg-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none"
         />
       </div>
@@ -57,8 +60,8 @@ export default function TopBar({ companyName }: { companyName: string | null }) 
 
         <button
           type="button"
-          title="Notifications"
-          aria-label="Notifications"
+          title={t('top.notifications')}
+          aria-label={t('top.notifications')}
           className="p-1.5 rounded-md text-gray-500 hover:bg-gray-100 hover:text-gray-700"
         >
           <svg
@@ -77,8 +80,8 @@ export default function TopBar({ companyName }: { companyName: string | null }) 
 
         <button
           type="button"
-          title="Help"
-          aria-label="Help"
+          title={t('top.help')}
+          aria-label={t('top.help')}
           className="p-1.5 rounded-md text-gray-500 hover:bg-gray-100 hover:text-gray-700"
         >
           <svg
@@ -96,13 +99,13 @@ export default function TopBar({ companyName }: { companyName: string | null }) 
           </svg>
         </button>
 
-        {/* Language switcher removed until real translations are wired (i18n phase). */}
+        <LanguageSwitch />
 
         <div className="relative" ref={menuRef}>
           <button
             type="button"
-            title="Account"
-            aria-label="Account menu"
+            title={t('top.account')}
+            aria-label={t('top.accountMenu')}
             onClick={() => setMenuOpen((o) => !o)}
             className="p-1.5 rounded-md text-gray-500 hover:bg-gray-100 hover:text-gray-700"
           >
@@ -126,7 +129,7 @@ export default function TopBar({ companyName }: { companyName: string | null }) 
                 href="/dashboard/settings"
                 className="block px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
               >
-                Settings
+                {t('nav.settings')}
               </a>
               <button
                 type="button"
@@ -134,7 +137,7 @@ export default function TopBar({ companyName }: { companyName: string | null }) 
                 disabled={signingOut}
                 className="w-full text-left px-3 py-2 text-sm text-red-600 hover:bg-red-50 disabled:opacity-50"
               >
-                {signingOut ? 'Signing out…' : 'Sign out'}
+                {signingOut ? t('top.signingOut') : t('top.signOut')}
               </button>
             </div>
           )}

@@ -1,5 +1,7 @@
 'use client'
 
+import { useT } from '@/lib/i18n/provider'
+
 import type { AiInsight } from '@/lib/demo-data'
 
 const SEV: Record<AiInsight['severity'], { bg: string; fg: string; icon: string }> = {
@@ -8,14 +10,15 @@ const SEV: Record<AiInsight['severity'], { bg: string; fg: string; icon: string 
   danger: { bg: 'var(--lemma-danger-soft)', fg: 'var(--lemma-danger)', icon: '!' },
 }
 
-const STAGE_LABEL: Record<AiInsight['stage'], string> = {
-  plan: 'Plan',
-  do: 'Do',
-  check: 'Check',
-  act: 'Act',
-}
+const STAGE_KEY = {
+  plan: 'demo.stage.plan',
+  do: 'demo.stage.do',
+  check: 'demo.stage.check',
+  act: 'demo.stage.act',
+} as const
 
 export default function AiInsights({ insights }: { insights: AiInsight[] }) {
+  const { t } = useT()
   return (
     <div className="lemma-card p-5">
       <div className="flex items-center gap-2 mb-3">
@@ -23,10 +26,10 @@ export default function AiInsights({ insights }: { insights: AiInsight[] }) {
           className="w-5 h-5 rounded-md flex items-center justify-center text-[11px] font-bold"
           style={{ background: 'var(--lemma-primary)', color: '#fff' }}
         >
-          AI
+          {t('insights.aiTag')}
         </span>
         <h2 className="text-[15px] font-semibold" style={{ color: 'var(--lemma-ink)' }}>
-          What Lemma AI noticed
+          {t('insights.title')}
         </h2>
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
@@ -53,7 +56,7 @@ export default function AiInsights({ insights }: { insights: AiInsight[] }) {
                     className="text-[9px] font-semibold uppercase px-1.5 py-0.5 rounded"
                     style={{ background: 'var(--lemma-canvas)', color: 'var(--lemma-mist)' }}
                   >
-                    {STAGE_LABEL[ins.stage]}
+                    {t(STAGE_KEY[ins.stage])}
                   </span>
                 </div>
                 <p className="text-[11px] mt-0.5" style={{ color: 'var(--lemma-slate)' }}>

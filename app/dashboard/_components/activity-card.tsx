@@ -1,14 +1,18 @@
+'use client'
+
 import { whenLabel, type ActivityItem } from '@/lib/pulse'
+import { useT } from '@/lib/i18n/provider'
 
 export default function ActivityCard({ items, today }: { items: ActivityItem[]; today: Date }) {
+  const { t, locale } = useT()
   return (
-    <section className="lemma-card p-5" aria-label="Recent activity">
+    <section className="lemma-card p-5" aria-label={t('card.activity')}>
       <h2 className="text-[15px] font-semibold" style={{ color: 'var(--lemma-ink)' }}>
-        Recent activity
+        {t('card.activity')}
       </h2>
       {items.length === 0 ? (
         <p className="mt-3 text-sm" style={{ color: 'var(--lemma-slate)' }}>
-          Reported problems and corrective actions will appear here.
+          {t('card.activity.empty')}
         </p>
       ) : (
         <ul className="mt-3">
@@ -27,7 +31,7 @@ export default function ActivityCard({ items, today }: { items: ActivityItem[]; 
                 {a.text}
               </span>
               <span className="text-[11px] whitespace-nowrap shrink-0" style={{ color: 'var(--lemma-mist)' }}>
-                {whenLabel(a.at, today)}
+                {whenLabel(a.at, today, locale)}
               </span>
             </li>
           ))}

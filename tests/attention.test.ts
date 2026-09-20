@@ -103,4 +103,24 @@ assert.equal(planned.find((i) => i.id === 'certificate-ends')!.actionLabel, 'Ope
 const far = buildAttention({ ...empty, certificate: { expires_on: '2028-11-14' } })
 assert.equal(far.length, 0, 'certificate far from ending shows nothing')
 
+// Korean output
+const ko = buildAttention({
+  ...empty,
+  locale: 'ko',
+  capas: [{ id: 'k', description: '포장 불량', severity: 'high', status: 'open', due_date: '2026-09-17', responsible_id: 'u1' }],
+  documents: [{ id: 'd', status: 'in_review' }, { id: 'e', status: 'in_review' }],
+  externalAudits: [{ id: 'x', kind: 'surveillance', planned_date: '2026-10-20', status: 'planned' }],
+})
+const kById = Object.fromEntries(ko.map((i) => [i.id, i]))
+assert.equal(kById['capa-k'].detail, '담당자: Sarah Kim · 마감 2026년 9월 17일')
+assert.equal(kById['capa-k'].actionLabel, '조치 열기')
+assert.equal(kById['documents-in-review'].title, '승인 대기 중인 문서 2건')
+assert.equal(kById['external-x'].title, '사후심사')
+assert.equal(kById['external-x'].detail, '인증기관 심사 · 2026년 10월 20일')
+assert.equal(dueLabel(-3, '2026-09-17', 'ko'), '기한 3일 초과')
+assert.equal(dueLabel(0, '2026-09-20', 'ko'), '오늘 마감')
+assert.equal(dueLabel(5, '2026-09-25', 'ko'), '5일 후 마감')
+assert.equal(dueLabel(20, '2026-10-10', 'ko'), '마감 2026년 10월 10일')
+assert.equal(formatDate('2026-06-22', 'ko'), '2026년 6월 22일')
+
 console.log('attention tests passed')

@@ -1,15 +1,19 @@
+'use client'
+
 import type { PulseRow } from '@/lib/pulse'
+import { useT } from '@/lib/i18n/provider'
 
 export default function PulseCard({ rows }: { rows: PulseRow[] }) {
+  const { t } = useT()
   const empty = rows.every((r) => r.value === 0 && r.delta === null)
   return (
-    <section className="lemma-card p-5" aria-label="Last 30 days">
+    <section className="lemma-card p-5" aria-label={t('card.pulse')}>
       <h2 className="text-[15px] font-semibold" style={{ color: 'var(--lemma-ink)' }}>
-        Last 30 days
+        {t('card.pulse')}
       </h2>
       {empty ? (
         <p className="mt-3 text-sm" style={{ color: 'var(--lemma-slate)' }}>
-          Nothing recorded yet. Reported problems and closed corrective actions will be counted here.
+          {t('card.pulse.empty')}
         </p>
       ) : (
         <ul className="mt-3">
@@ -28,7 +32,7 @@ export default function PulseCard({ rows }: { rows: PulseRow[] }) {
                     <span
                       className="text-[11px] font-medium"
                       style={{ color: better ? 'var(--lemma-ok)' : 'var(--lemma-check)' }}
-                      title="Compared with the 30 days before"
+                      title={t('card.pulse.compare')}
                     >
                       {r.delta > 0 ? '▲' : '▼'} {Math.abs(r.delta)}
                     </span>
@@ -40,7 +44,7 @@ export default function PulseCard({ rows }: { rows: PulseRow[] }) {
         </ul>
       )}
       <p className="text-[11px] mt-2" style={{ color: 'var(--lemma-mist)' }}>
-        Counted from the problems and corrective actions in Lemma. Arrows compare with the 30 days before.
+        {t('card.pulse.note')}
       </p>
     </section>
   )

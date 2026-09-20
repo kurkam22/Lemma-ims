@@ -27,10 +27,10 @@ assert.equal(trailOf('pending', 'missing', 0).answer, 'todo')
 
 // next step follows the order: answer, document, approval, evidence
 assert.equal(nextStep('not_applicable', 'missing', 0), null)
-assert.equal(nextStep('gap', 'missing', 0)!.label, 'Plan how to close this gap')
-assert.equal(nextStep('pending', 'missing', 0)!.label, 'Say where you stand on this')
+assert.equal(nextStep('gap', 'missing', 0)!.labelKey, 'req.next.gap')
+assert.equal(nextStep('pending', 'missing', 0)!.labelKey, 'req.next.answer')
 assert.equal(nextStep('compliant', 'missing', 0)!.href, '/dashboard/documents/generator')
-assert.equal(nextStep('compliant', 'draft', 0)!.label, 'Get the document approved')
+assert.equal(nextStep('compliant', 'draft', 0)!.labelKey, 'req.next.approve')
 assert.equal(nextStep('compliant', 'approved', 0)!.href, '/dashboard/evidence')
 assert.equal(nextStep('compliant', 'approved', 2), null, 'nothing left to do')
 

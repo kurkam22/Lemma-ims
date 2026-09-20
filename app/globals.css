@@ -20,6 +20,13 @@ body {
   font-family: Arial, Helvetica, sans-serif;
 }
 
+/* Korean: a font with Hangul, and no line breaks in the middle of a word. */
+html:lang(ko) body {
+  font-family: 'Pretendard', 'Apple SD Gothic Neo', 'Malgun Gothic', 'Noto Sans KR', Arial, sans-serif;
+  word-break: keep-all;
+  overflow-wrap: break-word;
+}
+
 @layer utilities {
   .text-balance {
     text-wrap: balance;

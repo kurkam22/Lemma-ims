@@ -1,5 +1,7 @@
 'use client'
 
+import { useT } from '@/lib/i18n/provider'
+
 import type { JourneyStage } from '@/lib/demo-data'
 
 const STAGE_VARS: Record<
@@ -19,22 +21,23 @@ export default function CertificationJourney({
   stages: JourneyStage[]
   activeStage: JourneyStage['key']
 }) {
+  const { t } = useT()
   return (
     <div className="lemma-card p-5">
       <div className="flex items-center justify-between mb-4">
         <div>
           <h2 className="text-[15px] font-semibold" style={{ color: 'var(--lemma-ink)' }}>
-            Certification journey
+            {t('journey.title')}
           </h2>
           <p className="text-xs mt-0.5" style={{ color: 'var(--lemma-mist)' }}>
-            Your ISO system runs as a continuous Plan · Do · Check · Act cycle
+            {t('journey.sub')}
           </p>
         </div>
         <span
           className="text-[11px] font-medium px-2.5 py-1 rounded-full"
           style={{ background: 'var(--lemma-primary-soft)', color: 'var(--lemma-primary)' }}
         >
-          Continuous improvement
+          {t('journey.badge')}
         </span>
       </div>
 
@@ -91,7 +94,7 @@ export default function CertificationJourney({
                   className="absolute -top-2 right-3 text-[9px] font-semibold px-1.5 py-0.5 rounded-full"
                   style={{ background: v.color, color: '#fff' }}
                 >
-                  you are here
+                  {t('journey.here')}
                 </div>
               )}
             </div>
@@ -103,8 +106,8 @@ export default function CertificationJourney({
         className="flex items-center justify-center gap-1.5 mt-3 text-[11px]"
         style={{ color: 'var(--lemma-mist)' }}
       >
-        Plan <span>→</span> Do <span>→</span> Check <span>→</span> Act{' '}
-        <span style={{ color: 'var(--lemma-slate)', fontWeight: 500 }}>→ repeat</span>
+        {t('demo.stage.plan')} <span>→</span> {t('demo.stage.do')} <span>→</span> {t('demo.stage.check')} <span>→</span> {t('demo.stage.act')}{' '}
+        <span style={{ color: 'var(--lemma-slate)', fontWeight: 500 }}>→ {t('journey.repeat')}</span>
       </div>
     </div>
   )

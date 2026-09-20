@@ -3,25 +3,27 @@
 // The rules are Lemma's own indicator, not an ISO result and not an auditor's
 // finding, so the words are "ready" and "needs work", never "conforming".
 
+import type { MessageKey } from '@/lib/i18n'
+
 export type ReqState = 'ready' | 'partly' | 'needs' | 'na' | 'notstarted'
 export type DocState = 'approved' | 'in_review' | 'draft' | 'missing'
 
-export const STATE_LABEL: Record<ReqState, string> = {
-  ready: 'Ready',
-  partly: 'Partly ready',
-  needs: 'Needs work',
-  na: 'Not applicable',
-  notstarted: 'Not started',
+export const STATE_KEY: Record<ReqState, MessageKey> = {
+  ready: 'req.state.ready',
+  partly: 'req.state.partly',
+  needs: 'req.state.needs',
+  na: 'req.state.na',
+  notstarted: 'req.state.notstarted',
 }
 
-export const PART_NAME: Record<string, string> = {
-  '4': 'Context',
-  '5': 'Leadership',
-  '6': 'Planning',
-  '7': 'Support',
-  '8': 'Operation',
-  '9': 'Checking',
-  '10': 'Improving',
+export const PART_KEY: Record<string, MessageKey> = {
+  '4': 'req.part.4',
+  '5': 'req.part.5',
+  '6': 'req.part.6',
+  '7': 'req.part.7',
+  '8': 'req.part.8',
+  '9': 'req.part.9',
+  '10': 'req.part.10',
 }
 
 export function partOf(clauseNumber: string): string {
@@ -57,14 +59,14 @@ export function trailOf(gap: string, doc: DocState, evidenceCount: number): Trai
 }
 
 /** The one thing to do next, in plain words, and where to do it. */
-export function nextStep(gap: string, doc: DocState, evidenceCount: number): { label: string; href: string } | null {
+export function nextStep(gap: string, doc: DocState, evidenceCount: number): { labelKey: MessageKey; href: string } | null {
   if (gap === 'not_applicable') return null
-  if (gap === 'gap') return { label: 'Plan how to close this gap', href: '/dashboard/gap-assessment' }
+  if (gap === 'gap') return { labelKey: 'req.next.gap', href: '/dashboard/gap-assessment' }
   const answered = gap === 'compliant' || gap === 'user_confirmed'
-  if (!answered) return { label: 'Say where you stand on this', href: '/dashboard/gap-assessment' }
-  if (doc === 'missing') return { label: 'Write the document', href: '/dashboard/documents/generator' }
-  if (doc !== 'approved') return { label: 'Get the document approved', href: '/dashboard/documents/centre' }
-  if (evidenceCount === 0) return { label: 'Add proof that it happens', href: '/dashboard/evidence' }
+  if (!answered) return { labelKey: 'req.next.answer', href: '/dashboard/gap-assessment' }
+  if (doc === 'missing') return { labelKey: 'req.next.write', href: '/dashboard/documents/generator' }
+  if (doc !== 'approved') return { labelKey: 'req.next.approve', href: '/dashboard/documents/centre' }
+  if (evidenceCount === 0) return { labelKey: 'req.next.evidence', href: '/dashboard/evidence' }
   return null
 }
 

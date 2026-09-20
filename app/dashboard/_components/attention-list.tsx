@@ -3,27 +3,28 @@
 import Link from 'next/link'
 import { useState } from 'react'
 import { dueLabel, type AttentionItem, type Urgency } from '@/lib/attention'
+import { useT } from '@/lib/i18n/provider'
 
-const URGENCY_STYLE: Record<Urgency, { dot: string; chipBg: string; chipFg: string; label: string }> = {
-  overdue: { dot: 'var(--lemma-danger)', chipBg: 'var(--lemma-danger-soft)', chipFg: 'var(--lemma-danger)', label: 'Overdue' },
-  today: { dot: 'var(--lemma-danger)', chipBg: 'var(--lemma-danger-soft)', chipFg: 'var(--lemma-danger)', label: 'Due today' },
-  soon: { dot: 'var(--lemma-check)', chipBg: 'var(--lemma-check-soft)', chipFg: 'var(--lemma-check)', label: 'This week' },
-  open: { dot: 'var(--lemma-check)', chipBg: 'var(--lemma-check-soft)', chipFg: 'var(--lemma-check)', label: 'Decide' },
-  upcoming: { dot: 'var(--lemma-mist)', chipBg: 'var(--lemma-canvas)', chipFg: 'var(--lemma-slate)', label: 'Coming up' },
+const URGENCY_STYLE: Record<Urgency, { dot: string; chipBg: string; chipFg: string; labelKey: 'att.chip.overdue' | 'att.chip.today' | 'att.chip.soon' | 'att.chip.open' | 'att.chip.upcoming' }> = {
+  overdue: { dot: 'var(--lemma-danger)', chipBg: 'var(--lemma-danger-soft)', chipFg: 'var(--lemma-danger)', labelKey: 'att.chip.overdue' },
+  today: { dot: 'var(--lemma-danger)', chipBg: 'var(--lemma-danger-soft)', chipFg: 'var(--lemma-danger)', labelKey: 'att.chip.today' },
+  soon: { dot: 'var(--lemma-check)', chipBg: 'var(--lemma-check-soft)', chipFg: 'var(--lemma-check)', labelKey: 'att.chip.soon' },
+  open: { dot: 'var(--lemma-check)', chipBg: 'var(--lemma-check-soft)', chipFg: 'var(--lemma-check)', labelKey: 'att.chip.open' },
+  upcoming: { dot: 'var(--lemma-mist)', chipBg: 'var(--lemma-canvas)', chipFg: 'var(--lemma-slate)', labelKey: 'att.chip.upcoming' },
 }
 
 const VISIBLE = 4
 
-function summary(items: AttentionItem[]): { text: string; tone: 'danger' | 'normal' }[] {
+function summary(items: AttentionItem[], t: (key: 'att.sum.urgent' | 'att.sum.week' | 'att.sum.decide' | 'att.sum.later', p: { count: number }) => string): { text: string; tone: 'danger' | 'normal' }[] {
   const overdue = items.filter((i) => i.urgency === 'overdue' || i.urgency === 'today').length
   const week = items.filter((i) => i.urgency === 'soon').length
   const decide = items.filter((i) => i.urgency === 'open').length
   const later = items.filter((i) => i.urgency === 'upcoming').length
   const out: { text: string; tone: 'danger' | 'normal' }[] = []
-  if (overdue) out.push({ text: `${overdue} urgent`, tone: 'danger' })
-  if (week) out.push({ text: `${week} this week`, tone: 'normal' })
-  if (decide) out.push({ text: `${decide} to decide`, tone: 'normal' })
-  if (later) out.push({ text: `${later} coming up`, tone: 'normal' })
+  if (overdue) out.push({ text: t('att.sum.urgent', { count: overdue }), tone: 'danger' })
+  if (week) out.push({ text: t('att.sum.week', { count: week }), tone: 'normal' })
+  if (decide) out.push({ text: t('att.sum.decide', { count: decide }), tone: 'normal' })
+  if (later) out.push({ text: t('att.sum.later', { count: later }), tone: 'normal' })
   return out
 }
 
@@ -37,16 +38,17 @@ export default function AttentionList({
   emptyHref: string
   emptyLabel: string
 }) {
+  const { t, locale } = useT()
   const [showAll, setShowAll] = useState(false)
   const shown = showAll ? items : items.slice(0, VISIBLE)
   const hidden = items.length - shown.length
-  const counts = summary(items)
+  const counts = summary(items, t)
 
   return (
     <section className="lemma-card overflow-hidden" aria-labelledby="attention-heading">
       <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 px-5 pt-4 pb-3">
         <h2 id="attention-heading" className="text-[15px] font-semibold" style={{ color: 'var(--lemma-ink)' }}>
-          Needs your attention
+          {t('att.title')}
         </h2>
         {counts.length > 0 && (
           <p className="text-xs" style={{ color: 'var(--lemma-slate)' }}>
@@ -63,10 +65,10 @@ export default function AttentionList({
       {items.length === 0 ? (
         <div className="px-5 pb-5">
           <p className="text-sm" style={{ color: 'var(--lemma-ink)' }}>
-            Nothing needs your attention right now.
+            {t('att.empty')}
           </p>
           <p className="text-xs mt-1" style={{ color: 'var(--lemma-slate)' }}>
-            Deadlines, open actions and pending approvals will appear here as you add them.
+            {t('att.empty2')}
           </p>
           <Link
             href={emptyHref}
@@ -80,7 +82,7 @@ export default function AttentionList({
         <ul>
           {shown.map((item) => {
             const s = URGENCY_STYLE[item.urgency]
-            const chip = item.daysLeft !== null ? dueLabel(item.daysLeft, item.due) : s.label
+            const chip = item.daysLeft !== null ? dueLabel(item.daysLeft, item.due, locale) : t(s.labelKey)
             return (
               <li key={item.id} style={{ borderTop: '1px solid var(--lemma-line)' }}>
                 <Link
@@ -124,7 +126,7 @@ export default function AttentionList({
             className="text-xs font-medium"
             style={{ color: 'var(--lemma-primary)' }}
           >
-            {showAll ? 'Show fewer' : `Show ${hidden} more`}
+            {showAll ? t('att.showFewer') : t('att.showMore', { count: hidden })}
           </button>
         </div>
       )}

@@ -3,11 +3,12 @@
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { ISO_9001_CLAUSES } from '@/lib/iso-clauses'
-import { deriveState, docState } from '@/lib/requirements'
+import { buildBoardRows } from '@/lib/requirement-rows'
+import { useT } from '@/lib/i18n/provider'
 import RequirementBoard, { type BoardRow } from '@/app/dashboard/_components/requirement-board'
 
 export default function RequirementsPage() {
+  const { t, locale } = useT()
   const [rows, setRows] = useState<BoardRow[] | null>(null)
   const [loading, setLoading] = useState(true)
 
@@ -34,30 +35,12 @@ export default function RequirementsPage() {
       ;(evRes.data ?? []).forEach((e) => {
         ;((e.clause_ids ?? []) as string[]).forEach((id) => evCount.set(id, (evCount.get(id) ?? 0) + 1))
       })
-      setRows(
-        ISO_9001_CLAUSES.map((c) => {
-          const gap = gapMap.get(c.number) ?? 'pending'
-          const doc = docState(docMap.get(c.number))
-          const evidenceCount = evCount.get(c.number) ?? 0
-          return {
-            number: c.number,
-            plain: c.plain,
-            title: c.title,
-            document: c.document,
-            evidence: c.evidence,
-            auditorAsks: c.auditorAsks,
-            gap,
-            doc,
-            evidenceCount,
-            state: deriveState(gap, doc, evidenceCount),
-          }
-        })
-      )
+      setRows(buildBoardRows({ gaps: gapMap, docs: docMap, evidence: evCount, locale }))
       setLoading(false)
     }
     load()
     return () => { cancelled = true }
-  }, [])
+  }, [locale])
 
   if (loading) return <div className="text-sm" style={{ color: 'var(--lemma-slate)' }}>Loading…</div>
   if (!rows) return <div className="text-sm" style={{ color: 'var(--lemma-slate)' }}>Finish company setup first.</div>
@@ -69,13 +52,13 @@ export default function RequirementsPage() {
       <div>
         <h1 className="text-2xl font-semibold" style={{ color: 'var(--lemma-ink)' }}>Requirements</h1>
         <p className="text-sm mt-1 max-w-2xl" style={{ color: 'var(--lemma-slate)' }}>
-          One square for each requirement, grouped by the seven parts of the standard. Choose a square to see what is done, what is missing, and what to do next.
+          {t('req.pageIntro')}
         </p>
       </div>
       {allNotStarted && (
         <div className="px-4 py-3 rounded-md text-sm" style={{ background: 'var(--lemma-check-soft)', color: 'var(--lemma-check)' }}>
-          Nothing is answered yet. Start on the{' '}
-          <Link href="/dashboard/gap-assessment" className="font-medium underline">Gap assessment</Link> and the squares will fill in.
+          {t('req.empty')}{' '}
+          <Link href="/dashboard/gap-assessment" className="font-medium underline">{t('req.emptyLink')}</Link>
         </div>
       )}
       <RequirementBoard rows={rows} />

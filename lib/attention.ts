@@ -10,6 +10,8 @@
 //
 // This file is pure (no database, no React) so it can be tested on its own.
 
+import { formatDateLocale, translate, translateCount, type Locale } from '@/lib/i18n'
+
 export type Urgency = 'overdue' | 'today' | 'soon' | 'upcoming' | 'open'
 
 export type AttentionKind =
@@ -127,6 +129,8 @@ export type AttentionInput = {
   /** Audits by the certification body, and the certificate. Optional too. */
   externalAudits?: ExternalAuditRow[]
   certificate?: CertificateRow | null
+  /** Language of the generated text. Defaults to English. */
+  locale?: Locale
   /** user id -> display name, used for CAPA owners */
   userNames: Record<string, string>
 }
@@ -152,22 +156,19 @@ export function urgencyFor(days: number | null): Urgency {
   return 'upcoming'
 }
 
-/** "Overdue by 3 days", "Due today", "Due in 5 days", "Due 12 Oct 2026". */
-export function dueLabel(days: number | null, iso: string | null): string {
+/** "Overdue by 3 days", "Due today", "Due in 5 days", "Due 12 Oct 2026" (or the Korean equivalents). */
+export function dueLabel(days: number | null, iso: string | null, locale: Locale = 'en'): string {
   if (days === null || !iso) return ''
-  if (days < 0) return days === -1 ? 'Overdue by 1 day' : `Overdue by ${-days} days`
-  if (days === 0) return 'Due today'
-  if (days === 1) return 'Due tomorrow'
-  if (days <= 14) return `Due in ${days} days`
-  return `Due ${formatDate(iso)}`
+  if (days < 0) return translateCount(locale, 'due.overdue', -days)
+  if (days === 0) return translate(locale, 'due.today')
+  if (days === 1) return translate(locale, 'due.tomorrow')
+  if (days <= 14) return translate(locale, 'due.inDays', { count: days })
+  return translate(locale, 'due.on', { date: formatDate(iso, locale) })
 }
 
 /** Always includes the year, so "22 Jun" can never be ambiguous. */
-export function formatDate(iso: string): string {
-  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(iso)
-  if (!m) return iso
-  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
-  return `${Number(m[3])} ${months[Number(m[2]) - 1]} ${m[1]}`
+export function formatDate(iso: string, locale: Locale = 'en'): string {
+  return formatDateLocale(iso, locale)
 }
 
 const URGENCY_RANK: Record<Urgency, number> = {
@@ -181,14 +182,13 @@ const URGENCY_RANK: Record<Urgency, number> = {
 // Only show dated items when they are overdue or due within this many days.
 const WINDOW_DAYS = 30
 
-function plural(n: number, one: string, many: string): string {
-  return `${n} ${n === 1 ? one : many}`
-}
-
 // ---- main ----------------------------------------------------------------
 
 export function buildAttention(input: AttentionInput): AttentionItem[] {
   const { today } = input
+  const locale: Locale = input.locale ?? 'en'
+  const tr = (key: Parameters<typeof translate>[1], params?: Record<string, string | number>) => translate(locale, key, params)
+  const fd = (iso: string) => formatDate(iso, locale)
   const items: AttentionItem[] = []
 
   // Corrective actions (CAPA) that are still open
@@ -198,19 +198,19 @@ export function buildAttention(input: AttentionInput): AttentionItem[] {
     if (days !== null && days > WINDOW_DAYS) continue
     const owner = c.responsible_id ? input.userNames[c.responsible_id] : undefined
     const parts = [
-      owner ? `Owner: ${owner}` : 'No owner assigned',
-      days !== null && c.due_date ? `Due ${formatDate(c.due_date)}` : 'No due date set',
+      owner ? tr('att.owner', { name: owner }) : tr('att.noOwner'),
+      days !== null && c.due_date ? tr('due.on', { date: fd(c.due_date) }) : tr('att.noDue'),
     ]
     items.push({
       id: `capa-${c.id}`,
       kind: 'capa',
-      title: c.description?.trim() || 'Corrective action',
+      title: c.description?.trim() || tr('att.capa.fallback'),
       detail: parts.join(' · '),
       due: c.due_date,
       urgency: urgencyFor(days),
       daysLeft: days,
       href: '/dashboard/capa',
-      actionLabel: 'Open action',
+      actionLabel: tr('att.act.openAction'),
     })
   }
 
@@ -223,13 +223,13 @@ export function buildAttention(input: AttentionInput): AttentionItem[] {
       items.push({
         id: `issue-${i.id}`,
         kind: 'issue',
-        title: `${code}: ${i.title}`,
-        detail: 'The fix is done. Someone needs to check the result and close it.',
+        title: tr('att.issue.title', { code, title: i.title }),
+        detail: tr('att.issue.resolved'),
         due: null,
         urgency: 'open',
         daysLeft: null,
         href: '/dashboard/issues',
-        actionLabel: 'Check result',
+        actionLabel: tr('att.act.checkResult'),
       })
       continue
     }
@@ -240,34 +240,34 @@ export function buildAttention(input: AttentionInput): AttentionItem[] {
       items.push({
         id: `issue-${i.id}`,
         kind: 'issue',
-        title: `${code}: ${i.title}`,
-        detail: `New problem with no owner yet · reported ${formatDate(i.created_at)}`,
+        title: tr('att.issue.title', { code, title: i.title }),
+        detail: tr('att.issue.noOwner', { date: fd(i.created_at) }),
         due: i.due_date,
         urgency: days !== null ? urgencyFor(days) : ageDays >= 2 ? 'soon' : 'open',
         daysLeft: days,
         href: '/dashboard/issues',
-        actionLabel: 'Choose owner',
+        actionLabel: tr('att.act.chooseOwner'),
       })
     } else {
       items.push({
         id: `issue-${i.id}`,
         kind: 'issue',
-        title: `${code}: ${i.title}`,
-        detail: [owner ? `Owner: ${owner}` : 'Owner assigned', days !== null && i.due_date ? `Due ${formatDate(i.due_date)}` : 'No due date set'].join(' · '),
+        title: tr('att.issue.title', { code, title: i.title }),
+        detail: [owner ? tr('att.owner', { name: owner }) : tr('att.ownerAssigned'), days !== null && i.due_date ? tr('due.on', { date: fd(i.due_date) }) : tr('att.noDue')].join(' · '),
         due: i.due_date,
         urgency: urgencyFor(days),
         daysLeft: days,
         href: '/dashboard/issues',
-        actionLabel: 'Open problem',
+        actionLabel: tr('att.act.openProblem'),
       })
     }
   }
 
   // Audits by the certification body (needs preparation, so a longer window)
   const EXTERNAL_LABEL = {
-    initial: 'Initial certification audit',
-    surveillance: 'Surveillance audit',
-    recertification: 'Recertification audit',
+    initial: tr('att.audit.initial'),
+    surveillance: tr('att.audit.surveillance'),
+    recertification: tr('att.audit.recertification'),
   } as const
   for (const a of input.externalAudits ?? []) {
     if (a.status !== 'planned') continue
@@ -277,12 +277,12 @@ export function buildAttention(input: AttentionInput): AttentionItem[] {
       id: `external-${a.id}`,
       kind: 'audit',
       title: EXTERNAL_LABEL[a.kind],
-      detail: days < 0 ? `Was planned for ${formatDate(a.planned_date)}. Mark it done or move the date.` : `By your certification body · ${formatDate(a.planned_date)}`,
+      detail: days < 0 ? tr('att.audit.overdue', { date: fd(a.planned_date) }) : tr('att.audit.by', { date: fd(a.planned_date) }),
       due: a.planned_date,
       urgency: urgencyFor(days),
       daysLeft: days,
       href: '/dashboard/certification',
-      actionLabel: days < 0 ? 'Update audit' : 'Prepare',
+      actionLabel: days < 0 ? tr('att.act.updateAudit') : tr('att.act.prepare'),
     })
   }
 
@@ -294,13 +294,13 @@ export function buildAttention(input: AttentionInput): AttentionItem[] {
       items.push({
         id: 'certificate-ends',
         kind: 'audit',
-        title: `Your certificate ends ${formatDate(input.certificate.expires_on)}`,
-        detail: hasPlan ? 'A recertification audit is on your calendar.' : 'Plan your recertification audit with your certification body.',
+        title: tr('att.cert.title', { date: fd(input.certificate.expires_on) }),
+        detail: hasPlan ? tr('att.cert.planned') : tr('att.cert.noPlan'),
         due: input.certificate.expires_on,
         urgency: left <= 30 ? urgencyFor(left) : hasPlan ? 'upcoming' : 'soon',
         daysLeft: left,
         href: '/dashboard/certification',
-        actionLabel: hasPlan ? 'Open clock' : 'Add audit',
+        actionLabel: hasPlan ? tr('att.act.openClock') : tr('att.act.addAudit'),
       })
     }
   }
@@ -313,13 +313,13 @@ export function buildAttention(input: AttentionInput): AttentionItem[] {
     items.push({
       id: `audit-${a.id}`,
       kind: 'audit',
-      title: `Internal audit: ${a.title?.trim() || a.department}`,
-      detail: days !== null && a.scheduled_date ? `Scheduled ${formatDate(a.scheduled_date)}` : 'No date set',
+      title: tr('att.internal.title', { name: a.title?.trim() || a.department }),
+      detail: days !== null && a.scheduled_date ? tr('att.internal.scheduled', { date: fd(a.scheduled_date) }) : tr('att.noDate'),
       due: a.scheduled_date,
       urgency: urgencyFor(days),
       daysLeft: days,
       href: '/dashboard/audits',
-      actionLabel: 'Open audit',
+      actionLabel: tr('att.act.openAudit'),
     })
   }
 
@@ -332,16 +332,13 @@ export function buildAttention(input: AttentionInput): AttentionItem[] {
         items.push({
           id: `supplier-cert-${s.id}`,
           kind: 'supplier',
-          title: `${s.name}: certificate ${days < 0 ? 'expired' : 'expires soon'}`,
-          detail:
-            days < 0
-              ? `Expired ${formatDate(s.cert_expiry)}`
-              : `Expires ${formatDate(s.cert_expiry)}`,
+          title: tr(days < 0 ? 'att.supplier.expired' : 'att.supplier.soon', { name: s.name }),
+          detail: tr(days < 0 ? 'att.supplier.expiredOn' : 'att.supplier.expiresOn', { date: fd(s.cert_expiry) }),
           due: s.cert_expiry,
           urgency: urgencyFor(days),
           daysLeft: days,
           href: '/dashboard/suppliers',
-          actionLabel: 'Review supplier',
+          actionLabel: tr('att.act.reviewSupplier'),
         })
       }
     }
@@ -349,13 +346,13 @@ export function buildAttention(input: AttentionInput): AttentionItem[] {
       items.push({
         id: `supplier-pending-${s.id}`,
         kind: 'supplier',
-        title: `${s.name}: waiting for your approval decision`,
-        detail: 'Approve or reject this supplier',
+        title: tr('att.supplier.pending', { name: s.name }),
+        detail: tr('att.supplier.pendingDetail'),
         due: null,
         urgency: 'open',
         daysLeft: null,
         href: '/dashboard/suppliers',
-        actionLabel: 'Review supplier',
+        actionLabel: tr('att.act.reviewSupplier'),
       })
     }
   }
@@ -370,13 +367,13 @@ export function buildAttention(input: AttentionInput): AttentionItem[] {
     items.push({
       id: 'training-plans',
       kind: 'training',
-      title: `${plural(dueTrainingPlans.length, 'planned training', 'planned trainings')} not recorded yet`,
-      detail: 'The planned month has arrived. Record the session or move it.',
+      title: translateCount(locale, 'att.training.plans', dueTrainingPlans.length),
+      detail: tr('att.training.plansDetail'),
       due: null,
       urgency: 'soon',
       daysLeft: null,
       href: '/dashboard/training',
-      actionLabel: 'Review training',
+      actionLabel: tr('att.act.reviewTraining'),
     })
   }
   const failedTraining = input.trainings.filter((t) => t.kind === 'record' && t.result === 'fail')
@@ -384,13 +381,13 @@ export function buildAttention(input: AttentionInput): AttentionItem[] {
     items.push({
       id: 'training-failed',
       kind: 'training',
-      title: `${plural(failedTraining.length, 'training result', 'training results')} marked failed`,
-      detail: 'Plan a repeat session and keep the new record.',
+      title: translateCount(locale, 'att.training.failed', failedTraining.length),
+      detail: tr('att.training.failedDetail'),
       due: null,
       urgency: 'open',
       daysLeft: null,
       href: '/dashboard/training',
-      actionLabel: 'Review training',
+      actionLabel: tr('att.act.reviewTraining'),
     })
   }
 
@@ -400,13 +397,13 @@ export function buildAttention(input: AttentionInput): AttentionItem[] {
     items.push({
       id: 'risks-untreated',
       kind: 'risk',
-      title: `${plural(untreated.length, 'risk has', 'risks have')} no treatment chosen`,
-      detail: 'Decide what to do about each one: avoid, reduce, transfer or accept.',
+      title: translateCount(locale, 'att.risk.untreated', untreated.length),
+      detail: tr('att.risk.untreatedDetail'),
       due: null,
       urgency: 'open',
       daysLeft: null,
       href: '/dashboard/risk',
-      actionLabel: 'Add treatment',
+      actionLabel: tr('att.act.addTreatment'),
     })
   }
   const overdueReviews = input.risks.filter((r) => {
@@ -418,13 +415,13 @@ export function buildAttention(input: AttentionInput): AttentionItem[] {
     items.push({
       id: 'risks-review',
       kind: 'risk',
-      title: `${plural(overdueReviews.length, 'risk review is', 'risk reviews are')} overdue`,
-      detail: 'Re-check whether the risk or your treatment has changed.',
+      title: translateCount(locale, 'att.risk.review', overdueReviews.length),
+      detail: tr('att.risk.reviewDetail'),
       due: null,
       urgency: 'soon',
       daysLeft: null,
       href: '/dashboard/risk',
-      actionLabel: 'Review risks',
+      actionLabel: tr('att.act.reviewRisks'),
     })
   }
 
@@ -438,12 +435,12 @@ export function buildAttention(input: AttentionInput): AttentionItem[] {
       id: `reminder-${r.id}`,
       kind: 'reminder',
       title: r.title,
-      detail: `Due ${formatDate(r.due_date)}`,
+      detail: tr('due.on', { date: fd(r.due_date) }),
       due: r.due_date,
       urgency: urgencyFor(days),
       daysLeft: days,
       href: '/dashboard/reminders',
-      actionLabel: 'Open reminder',
+      actionLabel: tr('att.act.openReminder'),
     })
   }
 
@@ -459,13 +456,13 @@ export function buildAttention(input: AttentionInput): AttentionItem[] {
     items.push({
       id: 'evidence-expiring',
       kind: 'evidence',
-      title: `${plural(expiringEvidence.length, 'record has', 'records have')} expired or will soon`,
-      detail: 'Upload the renewed record so your proof stays current.',
+      title: translateCount(locale, 'att.evidence', expiringEvidence.length),
+      detail: tr('att.evidenceDetail'),
       due: null,
       urgency: 'soon',
       daysLeft: null,
       href: '/dashboard/evidence',
-      actionLabel: 'Update evidence',
+      actionLabel: tr('att.act.updateEvidence'),
     })
   }
 
@@ -475,13 +472,13 @@ export function buildAttention(input: AttentionInput): AttentionItem[] {
     items.push({
       id: 'documents-in-review',
       kind: 'document',
-      title: `${plural(inReview.length, 'document is', 'documents are')} waiting for approval`,
-      detail: 'A document only counts once a person has approved it.',
+      title: translateCount(locale, 'att.docs', inReview.length),
+      detail: tr('att.docsDetail'),
       due: null,
       urgency: 'open',
       daysLeft: null,
       href: '/dashboard/documents',
-      actionLabel: 'Review documents',
+      actionLabel: tr('att.act.reviewDocuments'),
     })
   }
 

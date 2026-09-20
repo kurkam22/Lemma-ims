@@ -3,6 +3,8 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useState, useEffect } from 'react'
+import { useT } from '@/lib/i18n/provider'
+import type { MessageKey } from '@/lib/i18n'
 
 type IconName =
   | 'home'
@@ -15,15 +17,17 @@ type IconName =
   | 'sparkle'
 
 type NavItem = {
-  label: string
+  labelKey: MessageKey
   href: string
   icon?: IconName
-  substeps?: { label: string; href: string }[]
+  /** Kept in the list but not shown in the menu (its content lives on the dashboard). */
+  hidden?: boolean
+  substeps?: { labelKey: MessageKey; href: string }[]
   badgeCount?: number
 }
 
 type NavSection = {
-  title?: string
+  titleKey?: MessageKey
   items: NavItem[]
 }
 
@@ -105,6 +109,7 @@ export default function Sidebar({
   openCapaCount: number
 }) {
   const pathname = usePathname()
+  const { t } = useT()
   const [mobileOpen, setMobileOpen] = useState(false)
   // Which menu groups the person opened or closed by hand.
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({})
@@ -116,81 +121,81 @@ export default function Sidebar({
   const sections: NavSection[] = [
     {
       items: [
-        { label: 'Dashboard', href: '/dashboard', icon: 'home' },
-        { label: 'Report a problem', href: '/dashboard/issues?new=1', icon: 'shield' },
+        { labelKey: 'nav.dashboard', href: '/dashboard', icon: 'home' },
+        { labelKey: 'nav.reportProblem', href: '/dashboard/issues?new=1', icon: 'shield' },
       ],
     },
     {
-      title: 'START / SETUP',
+      titleKey: 'nav.group.setup',
       items: [
         {
-          label: 'Company profile',
+          labelKey: 'nav.companyProfile',
           href: '/dashboard/setup',
           icon: 'building',
           substeps: [
-            { label: 'Upload documents', href: '/dashboard/setup/step1' },
-            { label: 'AI findings', href: '/dashboard/setup/step2' },
-            { label: 'Team & sites', href: '/dashboard/setup/step3' },
-            { label: 'Processes & goals', href: '/dashboard/setup/step4' },
-            { label: 'Implementation plan', href: '/dashboard/setup/step5' },
+            { labelKey: 'nav.uploadDocuments', href: '/dashboard/setup/step1' },
+            { labelKey: 'nav.aiFindings', href: '/dashboard/setup/step2' },
+            { labelKey: 'nav.teamSites', href: '/dashboard/setup/step3' },
+            { labelKey: 'nav.processesGoals', href: '/dashboard/setup/step4' },
+            { labelKey: 'nav.implementationPlan', href: '/dashboard/setup/step5' },
           ],
         },
       ],
     },
     {
-      title: 'STANDARDS & REQUIREMENTS',
+      titleKey: 'nav.group.standards',
       items: [
-        { label: 'Build step by step', href: '/dashboard/guided-build', icon: 'layers' },
-        { label: 'Requirements explained', href: '/dashboard/standards', icon: 'layers' },
-        { label: 'Recommended standards', href: '/dashboard/standards-catalogue', icon: 'layers' },
-        { label: 'My selected standards', href: '/dashboard/standards-catalogue', icon: 'layers' },
-        { label: 'Process map', href: '/dashboard/processes', icon: 'layers' },
+        { labelKey: 'nav.buildStepByStep', href: '/dashboard/guided-build', icon: 'layers' },
+        { labelKey: 'nav.requirementsExplained', href: '/dashboard/standards', icon: 'layers' },
+        { labelKey: 'nav.recommendedStandards', href: '/dashboard/standards-catalogue', icon: 'layers' },
+        { labelKey: 'nav.selectedStandards', href: '/dashboard/standards-catalogue', icon: 'layers' },
+        { labelKey: 'nav.processMap', href: '/dashboard/processes', icon: 'layers' },
       ],
     },
     {
-      title: 'DOCUMENTS',
+      titleKey: 'nav.group.documents',
       items: [
-        { label: 'Required documents', href: '/dashboard/required-documents', icon: 'sparkle' },
-        { label: 'Create with AI', href: '/dashboard/documents/generator', icon: 'file' },
-        { label: 'Document centre', href: '/dashboard/documents/centre', icon: 'file' },
-        { label: 'Export package', href: '/dashboard/documents/export', icon: 'file' },
+        { labelKey: 'nav.requiredDocuments', href: '/dashboard/required-documents', icon: 'sparkle' },
+        { labelKey: 'nav.createWithAi', href: '/dashboard/documents/generator', icon: 'file' },
+        { labelKey: 'nav.documentCentre', href: '/dashboard/documents/centre', icon: 'file' },
+        { labelKey: 'nav.exportPackage', href: '/dashboard/documents/export', icon: 'file' },
       ],
     },
     {
-      title: 'IMPLEMENTATION',
+      titleKey: 'nav.group.implementation',
       items: [
-        { label: 'Records & evidence', href: '/dashboard/evidence', icon: 'shield' },
-        { label: 'Training', href: '/dashboard/training', icon: 'shield' },
-        { label: 'Suppliers & contractors', href: '/dashboard/suppliers', icon: 'shield' },
-        { label: 'Risks & opportunities', href: '/dashboard/risk', icon: 'shield' },
-        { label: 'Reminders & deadlines', href: '/dashboard/reminders', icon: 'shield' },
+        { labelKey: 'nav.recordsEvidence', href: '/dashboard/evidence', icon: 'shield' },
+        { labelKey: 'nav.training', href: '/dashboard/training', icon: 'shield' },
+        { labelKey: 'nav.suppliers', href: '/dashboard/suppliers', icon: 'shield' },
+        { labelKey: 'nav.risks', href: '/dashboard/risk', icon: 'shield' },
+        { labelKey: 'nav.reminders', href: '/dashboard/reminders', icon: 'shield' },
       ],
     },
     {
-      title: 'CHECK & AUDIT',
+      titleKey: 'nav.group.check',
       items: [
-        { label: 'AI readiness check', href: '/dashboard/compliance-check', icon: 'sparkle' },
-        { label: 'Gap assessment', href: '/dashboard/gap-assessment', icon: 'shield' },
-        { label: 'Requirements', href: '/dashboard/requirements', icon: 'layers' },
-        { label: 'Certificate clock', href: '/dashboard/certification', icon: 'shield' },
-        { label: 'Internal audits', href: '/dashboard/audits', icon: 'shield' },
-        { label: 'Management review', href: '/dashboard/management-review', icon: 'shield' },
-        { label: 'Reports', href: '/dashboard/reports', icon: 'chart' },
-        { label: 'Audit & certification guide', href: '/dashboard/choose-auditor', icon: 'shield' },
+        { labelKey: 'nav.aiReadiness', href: '/dashboard/compliance-check', icon: 'sparkle' },
+        { labelKey: 'nav.gapAssessment', href: '/dashboard/gap-assessment', icon: 'shield' },
+        { labelKey: 'nav.requirements', href: '/dashboard/requirements', icon: 'layers', hidden: true },
+        { labelKey: 'nav.certificateClock', href: '/dashboard/certification', icon: 'shield', hidden: true },
+        { labelKey: 'nav.internalAudits', href: '/dashboard/audits', icon: 'shield' },
+        { labelKey: 'nav.managementReview', href: '/dashboard/management-review', icon: 'shield' },
+        { labelKey: 'nav.reports', href: '/dashboard/reports', icon: 'chart' },
+        { labelKey: 'nav.auditGuide', href: '/dashboard/choose-auditor', icon: 'shield' },
       ],
     },
     {
-      title: 'IMPROVE',
+      titleKey: 'nav.group.improve',
       items: [
-        { label: 'Problems reported', href: '/dashboard/issues', icon: 'shield' },
-        { label: 'Corrective actions', href: '/dashboard/capa', icon: 'shield', badgeCount: openCapaCount },
-        { label: 'Improvement actions', href: '/dashboard/reports', icon: 'chart' },
-        { label: 'Consultant review', href: '/dashboard/consultant-review', icon: 'chart' },
+        { labelKey: 'nav.problemsReported', href: '/dashboard/issues', icon: 'shield' },
+        { labelKey: 'nav.correctiveActions', href: '/dashboard/capa', icon: 'shield', badgeCount: openCapaCount },
+        { labelKey: 'nav.improvementActions', href: '/dashboard/reports', icon: 'chart' },
+        { labelKey: 'nav.consultantReview', href: '/dashboard/consultant-review', icon: 'chart' },
       ],
     },
     {
-      title: 'ACCOUNT',
-      items: [{ label: 'Settings', href: '/dashboard/settings', icon: 'settings' }],
+      titleKey: 'nav.group.account',
+      items: [{ labelKey: 'nav.settings', href: '/dashboard/settings', icon: 'settings' }],
     },
   ]
 
@@ -202,18 +207,21 @@ export default function Sidebar({
     .map((section) => ({
       ...section,
       items: section.items.filter((item) => {
-        if (seenHrefs.has(item.href)) return false
+        if (item.hidden || seenHrefs.has(item.href)) return false
         seenHrefs.add(item.href)
         return true
       }),
     }))
     .filter((section) => section.items.length > 0)
 
+  const roleKey = `role.${userRole}` as MessageKey
+  const roleLabel = ['owner', 'admin', 'member', 'auditor'].includes(userRole) ? t(roleKey) : userRole
+
   return (
     <>
       <button
         type="button"
-        aria-label="Open menu"
+        aria-label={t('side.openMenu')}
         onClick={() => setMobileOpen(true)}
         className="lg:hidden fixed top-3 left-3 z-40 w-9 h-9 rounded-lg flex items-center justify-center"
         style={{ background: 'var(--lemma-surface)', border: '1px solid var(--lemma-line)' }}
@@ -241,12 +249,12 @@ export default function Sidebar({
               Lemma IMS
             </h1>
             <p className="text-[10px] mt-0.5" style={{ color: 'var(--lemma-mist)' }}>
-              AI-assisted ISO compliance
+              {t('side.tagline')}
             </p>
           </div>
           <button
             type="button"
-            aria-label="Close menu"
+            aria-label={t('side.closeMenu')}
             onClick={() => setMobileOpen(false)}
             className="lg:hidden"
             style={{ color: 'var(--lemma-mist)', fontSize: 20 }}
@@ -264,19 +272,19 @@ export default function Sidebar({
               (item.substeps ?? []).some((sub) => pathname === sub.href)
             )
           })
-          const expanded = !section.title || (openGroups[section.title] ?? holdsCurrentPage)
+          const expanded = !section.titleKey || (openGroups[section.titleKey] ?? holdsCurrentPage)
           const groupBadge = section.items.reduce((n, item) => n + (item.badgeCount ?? 0), 0)
           return (
           <div key={idx} className="mb-2">
-            {section.title && (
+            {section.titleKey && (
               <button
                 type="button"
                 aria-expanded={expanded}
-                onClick={() => setOpenGroups({ ...openGroups, [section.title as string]: !expanded })}
+                onClick={() => setOpenGroups({ ...openGroups, [section.titleKey as string]: !expanded })}
                 className="w-full flex items-center justify-between px-2 py-1.5 rounded-md text-[10px] font-semibold tracking-wider"
                 style={{ color: 'var(--lemma-mist)' }}
               >
-                <span>{section.title}</span>
+                <span>{t(section.titleKey)}</span>
                 <span className="flex items-center gap-1.5">
                   {!expanded && groupBadge > 0 && (
                     <span
@@ -293,7 +301,7 @@ export default function Sidebar({
             {expanded && section.items.map((item) => {
               const active = pathname === item.href
               return (
-                <div key={item.href + item.label}>
+                <div key={item.href + item.labelKey}>
                   <Link
                     href={item.href}
                     className="flex items-center justify-between gap-2 px-2 py-1.5 rounded-md"
@@ -305,7 +313,7 @@ export default function Sidebar({
                   >
                     <span className="flex items-center gap-2 min-w-0">
                       {item.icon && <Icon name={item.icon} />}
-                      <span className="truncate">{item.label}</span>
+                      <span className="truncate">{t(item.labelKey)}</span>
                     </span>
                     {item.badgeCount !== undefined && item.badgeCount > 0 && (
                       <span
@@ -327,7 +335,7 @@ export default function Sidebar({
                             className="block px-2 py-1 rounded text-[11px]"
                             style={sActive ? { color: 'var(--lemma-primary)', fontWeight: 500 } : { color: 'var(--lemma-mist)' }}
                           >
-                            {s.label}
+                            {t(s.labelKey)}
                           </Link>
                         )
                       })}
@@ -343,7 +351,7 @@ export default function Sidebar({
 
       <div className="px-3 py-3" style={{ borderTop: '1px solid var(--lemma-line)' }}>
         <div className="text-xs font-medium truncate" style={{ color: 'var(--lemma-ink)' }}>{userName}</div>
-        <div className="text-[10px] capitalize" style={{ color: 'var(--lemma-mist)' }}>{userRole}</div>
+        <div className="text-[10px]" style={{ color: 'var(--lemma-mist)' }}>{roleLabel}</div>
       </div>
     </aside>
     </>

@@ -5,8 +5,6 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import CertificationJourney from '@/app/dashboard/_components/certification-journey'
 import ComplianceChain from '@/app/dashboard/_components/compliance-chain'
-import ComplianceMetro from '@/app/dashboard/_components/compliance-metro'
-import { DEMO_METRO } from '@/lib/metro-data'
 import AiInsights from '@/app/dashboard/_components/ai-insights'
 import AttentionList from '@/app/dashboard/_components/attention-list'
 import ReadinessCard from '@/app/dashboard/_components/readiness-card'
@@ -15,14 +13,20 @@ import PulseCard from '@/app/dashboard/_components/pulse-card'
 import ActivityCard from '@/app/dashboard/_components/activity-card'
 import {
   DEMO_COMPANY,
-  DEMO_JOURNEY,
-  DEMO_CHAIN,
-  DEMO_AI_INSIGHTS,
   DEMO_READINESS_BY_AREA,
 } from '@/lib/demo-data'
 import { getDemoActivity, getDemoAttention, getDemoPulse } from '@/lib/demo-attention'
 import { buildActivity, buildPulse, type ActivityItem, type PulseRow } from '@/lib/pulse'
 import { buildAttention, type AttentionItem } from '@/lib/attention'
+import ClockPanel from '@/app/dashboard/_components/clock-panel'
+import RequirementsPanel from '@/app/dashboard/_components/requirements-panel'
+import type { BoardRow } from '@/app/dashboard/_components/requirement-board'
+import { buildClock, type ClockModel } from '@/lib/certclock'
+import { buildBoardRows, getDemoBoardRows } from '@/lib/requirement-rows'
+import { getDemoClock } from '@/lib/demo-clock'
+import { useT } from '@/lib/i18n/provider'
+import { intlLocale, type Locale } from '@/lib/i18n'
+import { getDemoChain, getDemoCompanyName, getDemoInsights, getDemoJourney } from '@/lib/demo-i18n'
 
 const SETUP_TOTAL_STEPS = 5
 
@@ -47,10 +51,14 @@ type DashboardData = {
   openIssues: number
   pulse: PulseRow[]
   activity: ActivityItem[]
+  clock: ClockModel | null
+  clockExpiresOn: string | null
+  requirements: BoardRow[]
   readinessByArea: { area: string; pct: number }[]
 }
 
 export default function DashboardPage() {
+  const { t, locale } = useT()
   const [data, setData] = useState<DashboardData | null>(null)
   const [loading, setLoading] = useState(true)
 
@@ -89,6 +97,9 @@ export default function DashboardPage() {
             openIssues: 0,
             pulse: [],
             activity: [],
+            clock: null,
+            clockExpiresOn: null,
+            requirements: [],
             readinessByArea: ISO_AREAS.map((a) => ({ area: a.area, pct: 0 })),
           })
           setLoading(false)
@@ -115,6 +126,9 @@ export default function DashboardPage() {
         capasRecentRes,
         externalRes,
         certRes,
+        reviewsRes,
+        docsAllRes,
+        evAllRes,
       ] = await Promise.all([
         supabase
           .from('companies')
@@ -185,7 +199,11 @@ export default function DashboardPage() {
         // Certificate and audits by the certification body. If those tables do
         // not exist yet these return an error and are simply left out.
         supabase.from('external_audits').select('id, kind, planned_date, status').eq('company_id', cid),
-        supabase.from('certificates').select('expires_on').eq('company_id', cid).eq('standard', 'iso9001').maybeSingle(),
+        supabase.from('certificates').select('issued_on, expires_on').eq('company_id', cid).eq('standard', 'iso9001').maybeSingle(),
+        // For the clock and the requirements board.
+        supabase.from('management_reviews').select('id, review_date, status').eq('company_id', cid),
+        supabase.from('documents').select('document_code, status').eq('company_id', cid),
+        supabase.from('evidence').select('clause_ids').eq('company_id', cid),
       ])
 
       const gaps = gapsRes.data ?? []
@@ -233,6 +251,7 @@ export default function DashboardPage() {
         reminders: remindersRes.data ?? [],
         evidence: evidenceAllRes.data ?? [],
         documents: docsReviewRes.data ?? [],
+        locale,
         issues: issuesRes.error ? [] : issuesRes.data ?? [],
         externalAudits: externalRes.error ? [] : externalRes.data ?? [],
         certificate: certRes.error ? null : certRes.data ?? null,
@@ -240,9 +259,32 @@ export default function DashboardPage() {
       const issueRows = issuesRes.error ? [] : issuesRes.data ?? []
       const capaRows = capasRecentRes.error ? [] : capasRecentRes.data ?? []
       const now = new Date()
-      const pulse = buildPulse(now, issueRows, capaRows)
-      const activity = buildActivity(issueRows, capaRows)
+      const pulse = buildPulse(now, issueRows, capaRows, locale)
+      const activity = buildActivity(issueRows, capaRows, 5, locale)
       const openIssues = issueRows.filter((i: { status: string }) => i.status !== 'closed').length
+
+      // Certificate clock (needs the certificate dates) and requirements board
+      const certRow = certRes.error ? null : certRes.data
+      const clock = certRow
+        ? buildClock({
+            today: now,
+            locale,
+            issuedOn: certRow.issued_on,
+            expiresOn: certRow.expires_on,
+            external: externalRes.error ? [] : externalRes.data ?? [],
+            internal: auditsRes.data ?? [],
+            reviews: reviewsRes.error ? [] : reviewsRes.data ?? [],
+          })
+        : null
+      const gapMap = new Map<string, string>()
+      ;(gapsRes.data ?? []).forEach((g: { clause_id: string | null; status: string }) => g.clause_id && gapMap.set(g.clause_id, g.status))
+      const docMap = new Map<string, string>()
+      ;(docsAllRes.data ?? []).forEach((d: { document_code: string | null; status: string }) => d.document_code && docMap.set(d.document_code, d.status))
+      const evMap = new Map<string, number>()
+      ;(evAllRes.data ?? []).forEach((e: { clause_ids: string[] | null }) => {
+        ;(e.clause_ids ?? []).forEach((id) => evMap.set(id, (evMap.get(id) ?? 0) + 1))
+      })
+      const requirements = buildBoardRows({ gaps: gapMap, docs: docMap, evidence: evMap, locale })
 
       if (!cancelled) {
         setData({
@@ -257,6 +299,9 @@ export default function DashboardPage() {
           openIssues,
           pulse,
           activity,
+          clock,
+          clockExpiresOn: certRow ? certRow.expires_on : null,
+          requirements,
           readinessByArea,
         })
         setLoading(false)
@@ -273,7 +318,7 @@ export default function DashboardPage() {
   if (!data) {
     return (
       <div className="text-sm text-gray-500">
-        Could not load dashboard. Try refreshing the page.
+        {t('dash.loadError')}
       </div>
     )
   }
@@ -284,7 +329,7 @@ export default function DashboardPage() {
   // Show the sample workspace only when the company has no data of its own yet.
   const usingDemo =
     data.readinessPct === 0 && data.documentsReady === 0 && data.attention.length === 0
-  const attention = usingDemo ? getDemoAttention() : data.attention
+  const attention = usingDemo ? getDemoAttention(new Date(), locale) : data.attention
   const view = usingDemo
     ? {
         readinessPct: DEMO_COMPANY.readinessPct,
@@ -308,24 +353,23 @@ export default function DashboardPage() {
       }
 
   const hour = new Date().getHours()
-  const greeting = hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening'
-  const todayLabel = new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
+  const dayPart = hour < 12 ? 'morning' : hour < 18 ? 'afternoon' : 'evening'
+  const todayLabel = new Date().toLocaleDateString(intlLocale(locale as Locale), { day: 'numeric', month: 'short', year: 'numeric' })
   const areas = usingDemo ? DEMO_READINESS_BY_AREA : data.readinessByArea
-  const pulseRows = usingDemo ? getDemoPulse() : data.pulse
-  const activityItems = usingDemo ? getDemoActivity() : data.activity
+  const pulseRows = usingDemo ? getDemoPulse(new Date(), locale) : data.pulse
+  const activityItems = usingDemo ? getDemoActivity(new Date(), locale) : data.activity
   const openIssues = usingDemo ? 1 : data.openIssues
+  const demoClock = getDemoClock(new Date(), locale)
 
   return (
     <div className="space-y-5 max-w-7xl">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="text-2xl font-semibold" style={{ color: 'var(--lemma-ink)' }}>
-            {usingDemo ? 'Your quality system, in one place' : firstName ? `${greeting}, ${firstName}` : greeting}
+            {usingDemo ? t('dash.title.sample') : firstName ? t(`dash.hello.${dayPart}.named` as 'dash.hello.morning.named', { name: firstName }) : t(`dash.hello.${dayPart}` as 'dash.hello.morning')}
           </h1>
           <p className="text-sm mt-1" style={{ color: 'var(--lemma-slate)' }}>
-            {usingDemo
-              ? `${DEMO_COMPANY.name} (sample company)`
-              : 'Here is what needs your attention and where your quality system stands.'}
+            {usingDemo ? t('dash.sampleCompany', { name: getDemoCompanyName(locale) }) : t('dash.sub')}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -341,7 +385,7 @@ export default function DashboardPage() {
               className="text-sm font-medium px-4 py-2 rounded-md"
               style={{ background: 'var(--lemma-primary)', color: '#fff' }}
             >
-              Report a problem
+              {t('dash.reportProblem')}
             </Link>
           )}
         </div>
@@ -352,7 +396,7 @@ export default function DashboardPage() {
           className="text-xs font-medium px-3 py-2 rounded-md"
           style={{ background: 'var(--lemma-check-soft)', color: 'var(--lemma-check)' }}
         >
-          Sample data. Start setup to see your own.
+          {t('dash.sampleBanner')}
         </div>
       )}
 
@@ -365,7 +409,7 @@ export default function DashboardPage() {
           <AttentionList
             items={attention}
             emptyHref={setupComplete ? '/dashboard/compliance-check' : '/dashboard/setup'}
-            emptyLabel={setupComplete ? 'Run your readiness check' : 'Continue setup'}
+            emptyLabel={setupComplete ? t('att.emptyReadiness') : t('att.emptySetup')}
           />
         </div>
         <ReadinessCard pct={view.readinessPct} areas={areas} />
@@ -382,44 +426,41 @@ export default function DashboardPage() {
         <ActivityCard items={activityItems} today={new Date()} />
       </div>
 
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-5 items-start">
+        {usingDemo ? (
+          <ClockPanel model={demoClock.model} expiresOn={demoClock.expiresOn} today={new Date()} sample />
+        ) : (
+          <ClockPanel model={data.clock} expiresOn={data.clockExpiresOn} today={new Date()} />
+        )}
+        <RequirementsPanel rows={usingDemo ? getDemoBoardRows(locale) : data.requirements} sample={usingDemo} />
+      </div>
+
       {usingDemo && (
         <>
-          <CertificationJourney stages={DEMO_JOURNEY} activeStage={view.stage} />
-          <ComplianceChain rows={DEMO_CHAIN} />
-          <AiInsights insights={DEMO_AI_INSIGHTS} />
-          <details className="lemma-card">
-            <summary
-              className="px-5 py-3 text-sm font-medium cursor-pointer"
-              style={{ color: 'var(--lemma-ink)' }}
-            >
-              System overview (optional)
-            </summary>
-            <div className="px-2 pb-2">
-              <ComplianceMetro clauses={DEMO_METRO} />
-            </div>
-          </details>
+          <CertificationJourney stages={getDemoJourney(locale)} activeStage={view.stage} />
+          <ComplianceChain rows={getDemoChain(locale)} />
+          <AiInsights insights={getDemoInsights(locale)} />
         </>
       )}
 
       <p className="text-[11px] leading-relaxed px-1" style={{ color: 'var(--lemma-mist)' }}>
-        AI outputs are based on company-provided information and require human review.
-        Lemma IMS is not a certification body and does not guarantee certification.
+        {t('dash.footer')}
       </p>
     </div>
   )
 }
 
 function SetupBanner({ step, total }: { step: number; total: number }) {
+  const { t } = useT()
   const pct = Math.round((step / total) * 100)
   return (
     <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-4 flex flex-wrap items-center justify-between gap-4">
       <div>
         <div className="text-sm font-semibold text-blue-900">
-          Complete company setup
+          {t('setup.title')}
         </div>
         <div className="text-xs text-blue-700 mt-0.5">
-          Step {step} of {total} — answer company questions to calculate your ISO
-          readiness.
+          {t('setup.progress', { step, total })}
         </div>
       </div>
       <div className="flex items-center gap-3">
@@ -430,7 +471,7 @@ function SetupBanner({ step, total }: { step: number; total: number }) {
           href="/dashboard/setup"
           className="text-xs font-medium text-blue-700 hover:text-blue-900 whitespace-nowrap"
         >
-          Resume setup →
+          {t('setup.resume')}
         </Link>
       </div>
     </div>

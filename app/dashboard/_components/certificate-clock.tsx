@@ -1,4 +1,7 @@
+'use client'
+
 import { formatDate } from '@/lib/attention'
+import { useT } from '@/lib/i18n/provider'
 import { splitLabel, type ClockEvent, type ClockKind, type ClockModel } from '@/lib/certclock'
 
 const CX = 320
@@ -36,19 +39,21 @@ export function LegendMarker({ kind, done = true }: { kind: ClockKind; done?: bo
 }
 
 export default function CertificateClock({ model, today }: { model: ClockModel; today: Date }) {
+  const { t, tc, locale } = useT()
   const placed = model.events.filter((e): e is ClockEvent & { ring: 0 | 1 | 2; angle: number } => e.ring !== null && e.angle !== null)
   const next = model.next
   const [line1, line2] = next ? splitLabel(next.label) : ['', '']
   const circ = (r: number) => 2 * Math.PI * r
   const todayIso = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
-  const todayLabel = formatDate(todayIso).toUpperCase()
+  const todayLabel = locale === 'en' ? formatDate(todayIso, locale).toUpperCase() : formatDate(todayIso, locale)
 
+  const whenText = next ? (next.daysLeft === 0 ? t('clock.todayWord') : tc('clock.inDays', next.daysLeft)) : ''
   const summary = next
-    ? `Next: ${next.label} on ${formatDate(next.date)}, in ${next.daysLeft} ${next.daysLeft === 1 ? 'day' : 'days'}.`
-    : 'No upcoming audits or reviews are planned.'
+    ? t('clock.summary.next', { label: next.label, date: formatDate(next.date, locale), when: whenText })
+    : t('clock.summary.none')
 
   return (
-    <svg viewBox="0 0 640 640" className="w-full h-auto" style={{ maxWidth: 640 }} role="img" aria-label={`Three rings, one for each year of the certificate. ${summary}`}>
+    <svg viewBox="0 0 640 640" className="w-full h-auto" style={{ maxWidth: 640 }} role="img" aria-label={t('clock.aria', { summary })}>
       {RADII.map((r) => (
         <circle key={r} cx={CX} cy={CY} r={r} fill="none" stroke="var(--lemma-line)" strokeWidth={BAND} />
       ))}
@@ -90,11 +95,11 @@ export default function CertificateClock({ model, today }: { model: ClockModel; 
         return <line x1={x1} y1={y1} x2={x2} y2={y2} stroke="var(--lemma-ink)" strokeWidth={1.5} strokeDasharray="3 4" />
       })()}
       <text x={CX + 10} y={CY - RADII[0] - BAND / 2 - 14} fontSize={12} fontWeight={600} fill="var(--lemma-ink)">
-        Certificate anniversary
+        {t('clock.anniversary')}
       </text>
       {RADII.map((r, i) => (
-        <text key={i} x={CX - 12} y={CY - r + 4} textAnchor="end" fontSize={11} fontWeight={600} letterSpacing={1.2} fill="var(--lemma-slate)">
-          YEAR {i + 1}
+        <text key={i} x={CX - 12} y={CY - r + 4} textAnchor="end" fontSize={11} fontWeight={600} letterSpacing={locale === 'en' ? 1.2 : 0} fill="var(--lemma-slate)">
+          {t('clock.year', { n: i + 1 })}
         </text>
       ))}
 
@@ -121,23 +126,23 @@ export default function CertificateClock({ model, today }: { model: ClockModel; 
       })()}
 
       {/* centre */}
-      <text x={CX} y={CY - 52} textAnchor="middle" fontSize={12} fontWeight={600} letterSpacing={1.4} fill="var(--lemma-slate)">
-        TODAY · {todayLabel}
+      <text x={CX} y={CY - 52} textAnchor="middle" fontSize={12} fontWeight={600} letterSpacing={locale === 'en' ? 1.4 : 0} fill="var(--lemma-slate)">
+        {t('clock.today', { date: todayLabel })}
       </text>
       {next ? (
         <>
-          <text x={CX} y={CY - 22} textAnchor="middle" fontSize={13} fill="var(--lemma-slate)">Next</text>
+          <text x={CX} y={CY - 22} textAnchor="middle" fontSize={13} fill="var(--lemma-slate)">{t('clock.next')}</text>
           <text x={CX} y={CY + 6} textAnchor="middle" fontSize={line2 ? 24 : 26} fontWeight={700} fill="var(--lemma-ink)">{line1}</text>
           {line2 && <text x={CX} y={CY + 34} textAnchor="middle" fontSize={24} fontWeight={700} fill="var(--lemma-ink)">{line2}</text>}
-          <text x={CX} y={CY + (line2 ? 60 : 32)} textAnchor="middle" fontSize={14} fill="var(--lemma-ink)">{formatDate(next.date)}</text>
+          <text x={CX} y={CY + (line2 ? 60 : 32)} textAnchor="middle" fontSize={14} fill="var(--lemma-ink)">{formatDate(next.date, locale)}</text>
           <text x={CX} y={CY + (line2 ? 80 : 52)} textAnchor="middle" fontSize={14} fontWeight={600} fill="var(--lemma-check)">
-            {next.daysLeft === 0 ? 'today' : `in ${next.daysLeft} ${next.daysLeft === 1 ? 'day' : 'days'}`}
+            {whenText}
           </text>
         </>
       ) : (
         <>
-          <text x={CX} y={CY + 4} textAnchor="middle" fontSize={20} fontWeight={700} fill="var(--lemma-ink)">Nothing planned</text>
-          <text x={CX} y={CY + 30} textAnchor="middle" fontSize={13} fill="var(--lemma-slate)">Add your next audit</text>
+          <text x={CX} y={CY + 4} textAnchor="middle" fontSize={20} fontWeight={700} fill="var(--lemma-ink)">{t('clock.nothing')}</text>
+          <text x={CX} y={CY + 30} textAnchor="middle" fontSize={13} fill="var(--lemma-slate)">{t('clock.addNext')}</text>
         </>
       )}
     </svg>

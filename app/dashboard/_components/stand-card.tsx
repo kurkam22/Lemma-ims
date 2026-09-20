@@ -1,3 +1,7 @@
+'use client'
+
+import { useT } from '@/lib/i18n/provider'
+
 function Mark({ good }: { good: boolean }) {
   return (
     <span
@@ -25,16 +29,17 @@ export default function StandCard({
   openCapas: number
   openIssues: number
 }) {
+  const { t } = useT()
   const rows: { label: string; value: number; good: boolean }[] = [
-    { label: 'Documents approved', value: documentsReady, good: documentsReady > 0 },
-    { label: 'Evidence confirmed', value: evidenceConfirmed, good: evidenceConfirmed > 0 },
-    { label: 'Open problems', value: openIssues, good: openIssues === 0 },
-    { label: 'Open corrective actions', value: openCapas, good: openCapas === 0 },
+    { label: t('card.stand.docs'), value: documentsReady, good: documentsReady > 0 },
+    { label: t('card.stand.evidence'), value: evidenceConfirmed, good: evidenceConfirmed > 0 },
+    { label: t('card.stand.problems'), value: openIssues, good: openIssues === 0 },
+    { label: t('card.stand.capas'), value: openCapas, good: openCapas === 0 },
   ]
   return (
-    <section className="lemma-card p-5" aria-label="Where you stand">
+    <section className="lemma-card p-5" aria-label={t('card.stand')}>
       <h2 className="text-[15px] font-semibold" style={{ color: 'var(--lemma-ink)' }}>
-        Where you stand
+        {t('card.stand')}
       </h2>
       <ul className="mt-3">
         {rows.map((r, i) => (

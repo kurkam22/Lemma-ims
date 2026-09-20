@@ -1,8 +1,6 @@
 import Link from 'next/link'
 import CertificationJourney from '@/app/dashboard/_components/certification-journey'
 import ComplianceChain from '@/app/dashboard/_components/compliance-chain'
-import ComplianceMetro from '@/app/dashboard/_components/compliance-metro'
-import { DEMO_METRO } from '@/lib/metro-data'
 import AiInsights from '@/app/dashboard/_components/ai-insights'
 import AttentionList from '@/app/dashboard/_components/attention-list'
 import ReadinessCard from '@/app/dashboard/_components/readiness-card'
@@ -10,6 +8,14 @@ import StandCard from '@/app/dashboard/_components/stand-card'
 import PulseCard from '@/app/dashboard/_components/pulse-card'
 import ActivityCard from '@/app/dashboard/_components/activity-card'
 import { getDemoActivity, getDemoAttention, getDemoPulse } from '@/lib/demo-attention'
+import { getDemoChain, getDemoCompanyName, getDemoInsights, getDemoJourney } from '@/lib/demo-i18n'
+import ClockPanel from '@/app/dashboard/_components/clock-panel'
+import RequirementsPanel from '@/app/dashboard/_components/requirements-panel'
+import { getDemoClock } from '@/lib/demo-clock'
+import { getDemoBoardRows } from '@/lib/requirement-rows'
+import { getLocale } from '@/lib/i18n/server'
+import { translate } from '@/lib/i18n'
+import LanguageSwitch from '@/app/_components/language-switch'
 import {
   DEMO_COMPANY,
   DEMO_JOURNEY,
@@ -39,6 +45,9 @@ function formatDate(d: string) {
 }
 
 export default function PublicDemoPage() {
+  const locale = getLocale()
+  const demoClock = getDemoClock(new Date(), locale)
+  const t = (key: Parameters<typeof translate>[1], params?: Record<string, string | number>) => translate(locale, key, params)
   return (
     <div style={{ background: 'var(--lemma-canvas)', minHeight: '100vh' }}>
       {/* Public top bar */}
@@ -52,23 +61,24 @@ export default function PublicDemoPage() {
             className="text-[10px] font-medium px-2 py-0.5 rounded-full"
             style={{ background: 'var(--lemma-check-soft)', color: 'var(--lemma-check)' }}
           >
-            Live demo · sample data
+            {t('demo.badge')}
           </span>
         </div>
         <div className="flex items-center gap-2">
+          <LanguageSwitch />
           <Link
             href="/login"
             className="text-xs px-3 py-1.5 rounded-md"
             style={{ color: 'var(--lemma-slate)' }}
           >
-            Sign in
+            {t('demo.signIn')}
           </Link>
           <Link
             href="/register"
             className="text-xs font-medium px-3 py-1.5 rounded-md"
             style={{ background: 'var(--lemma-primary)', color: '#fff' }}
           >
-            Get started
+            {t('demo.getStarted')}
           </Link>
         </div>
       </header>
@@ -76,16 +86,16 @@ export default function PublicDemoPage() {
       <main className="p-4 lg:p-6 max-w-7xl mx-auto space-y-5">
         <div>
           <h1 className="text-2xl font-semibold" style={{ color: 'var(--lemma-ink)' }}>
-            Your quality system, in one place
+            {t('dash.title.sample')}
           </h1>
           <p className="text-sm mt-1" style={{ color: 'var(--lemma-slate)' }}>
-            {DEMO_COMPANY.name} · {DEMO_COMPANY.standard} · this is a sample workspace you can explore freely
+            {t('demo.sub', { name: getDemoCompanyName(locale), standard: DEMO_COMPANY.standard })}
           </p>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 items-start">
           <div className="lg:col-span-2">
-            <AttentionList items={getDemoAttention()} emptyHref="/register" emptyLabel="Start free" />
+            <AttentionList items={getDemoAttention(new Date(), locale)} emptyHref="/register" emptyLabel={t('demo.startFree')} />
           </div>
           <ReadinessCard pct={DEMO_COMPANY.readinessPct} areas={DEMO_READINESS_BY_AREA} />
         </div>
@@ -97,27 +107,21 @@ export default function PublicDemoPage() {
             openCapas={DEMO_COMPANY.openCapa}
             openIssues={1}
           />
-          <PulseCard rows={getDemoPulse()} />
-          <ActivityCard items={getDemoActivity()} today={new Date()} />
+          <PulseCard rows={getDemoPulse(new Date(), locale)} />
+          <ActivityCard items={getDemoActivity(new Date(), locale)} today={new Date()} />
         </div>
 
-        <CertificationJourney stages={DEMO_JOURNEY} activeStage={DEMO_COMPANY.currentStage} />
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-5 items-start">
+          <ClockPanel model={demoClock.model} expiresOn={demoClock.expiresOn} today={new Date()} sample />
+          <RequirementsPanel rows={getDemoBoardRows(locale)} sample />
+        </div>
 
-        <ComplianceChain rows={DEMO_CHAIN} />
+        <CertificationJourney stages={getDemoJourney(locale)} activeStage={DEMO_COMPANY.currentStage} />
 
-        <AiInsights insights={DEMO_AI_INSIGHTS} />
+        <ComplianceChain rows={getDemoChain(locale)} />
 
-        <details className="lemma-card">
-          <summary
-            className="px-5 py-3 text-sm font-medium cursor-pointer"
-            style={{ color: 'var(--lemma-ink)' }}
-          >
-            System overview (optional)
-          </summary>
-          <div className="px-2 pb-2">
-            <ComplianceMetro clauses={DEMO_METRO} />
-          </div>
-        </details>
+        <AiInsights insights={getDemoInsights(locale)} />
+
 
         <div
           className="lemma-card p-5 flex flex-col sm:flex-row items-center justify-between gap-3"
@@ -125,10 +129,10 @@ export default function PublicDemoPage() {
         >
           <div>
             <div className="text-sm font-semibold" style={{ color: 'var(--lemma-ink)' }}>
-              Want this for your company?
+              {t('demo.ctaTitle')}
             </div>
             <div className="text-xs" style={{ color: 'var(--lemma-slate)' }}>
-              Create a free workspace and Lemma AI guides you to certification.
+              {t('demo.ctaText')}
             </div>
           </div>
           <Link
@@ -136,14 +140,12 @@ export default function PublicDemoPage() {
             className="text-sm font-medium px-5 py-2.5 rounded-md whitespace-nowrap"
             style={{ background: 'var(--lemma-primary)', color: '#fff' }}
           >
-            Start free
+            {t('demo.startFree')}
           </Link>
         </div>
 
         <p className="text-[11px] leading-relaxed px-1" style={{ color: 'var(--lemma-mist)' }}>
-          This is a demonstration with sample data. AI outputs are based on company-provided
-          information and require human review. Lemma IMS is not a certification body and does
-          not guarantee certification.
+          {t('demo.footer')}
         </p>
       </main>
     </div>

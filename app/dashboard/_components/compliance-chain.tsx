@@ -1,29 +1,31 @@
 'use client'
 
+import { useT } from '@/lib/i18n/provider'
+
 import type { ComplianceChainRow, ChainStatus, Origin } from '@/lib/demo-data'
 
-const STATUS_STYLE: Record<ChainStatus, { bg: string; fg: string; dot: string; label: string }> = {
+const STATUS_STYLE: Record<ChainStatus, { bg: string; fg: string; dot: string; labelKey: 'chain.status.done' | 'chain.status.progress' | 'chain.status.missing' }> = {
   done: {
     bg: 'var(--lemma-ok-soft)',
     fg: 'var(--lemma-ok)',
     dot: 'var(--lemma-ok)',
-    label: 'Done',
+    labelKey: 'chain.status.done' as const,
   },
   progress: {
     bg: 'var(--lemma-check-soft)',
     fg: 'var(--lemma-check)',
     dot: 'var(--lemma-check)',
-    label: 'In progress',
+    labelKey: 'chain.status.progress' as const,
   },
   missing: {
     bg: 'var(--lemma-danger-soft)',
     fg: 'var(--lemma-danger)',
     dot: 'var(--lemma-danger)',
-    label: 'Missing',
+    labelKey: 'chain.status.missing' as const,
   },
 }
 
-const LINKS = ['Clause', 'Requirement', 'Answer', 'Document', 'Evidence', 'Audit', 'CAPA']
+const LINK_KEYS = ['chain.col.clause', 'chain.col.requirement', 'chain.col.answer', 'chain.col.document', 'chain.col.evidence', 'chain.col.audit', 'chain.col.capa'] as const
 
 function Node({
   label,
@@ -36,6 +38,7 @@ function Node({
   strong?: boolean
   origin?: Origin
 }) {
+  const { t } = useT()
   const s = status ? STATUS_STYLE[status] : null
   return (
     <div
@@ -52,7 +55,7 @@ function Node({
             style={{ background: STATUS_STYLE[status].dot }}
           />
           <span className="text-[9px] font-semibold uppercase tracking-wide" style={{ color: s!.fg }}>
-            {STATUS_STYLE[status].label}
+            {t(STATUS_STYLE[status].labelKey)}
           </span>
         </div>
       )}
@@ -71,11 +74,11 @@ function Node({
           style={{ color: origin === 'iso' ? 'var(--lemma-primary)' : 'var(--lemma-mist)' }}
           title={
             origin === 'iso'
-              ? 'This comes from the ISO standard.'
-              : 'Your company decided this — the standard does not set it.'
+              ? t('chain.tip.iso')
+              : t('chain.tip.company')
           }
         >
-          {origin === 'iso' ? 'ISO requirement' : 'Your company’s choice'}
+          {origin === 'iso' ? t('chain.origin.iso') : t('chain.origin.company')}
         </div>
       )}
     </div>
@@ -91,29 +94,29 @@ function Arrow() {
 }
 
 export default function ComplianceChain({ rows }: { rows: ComplianceChainRow[] }) {
+  const { t } = useT()
   return (
     <div className="lemma-card p-5">
       <div className="flex items-center justify-between mb-1">
         <h2 className="text-[15px] font-semibold" style={{ color: 'var(--lemma-ink)' }}>
-          Compliance chain
+          {t('chain.title')}
         </h2>
         <span className="text-[11px]" style={{ color: 'var(--lemma-mist)' }}>
-          one requirement, end to end
+          {t('chain.tag')}
         </span>
       </div>
       <p className="text-xs mb-3" style={{ color: 'var(--lemma-slate)' }}>
-        See how a single ISO clause becomes an answer, a document, evidence, an audit
-        result, and a corrective action — the full trace an auditor follows.
+        {t('chain.desc')}
       </p>
 
       <div
         className="hidden md:flex items-center gap-1 mb-2 px-1"
         style={{ color: 'var(--lemma-mist)' }}
       >
-        {LINKS.map((l, i) => (
+        {LINK_KEYS.map((l, i) => (
           <div key={l} className="flex items-center gap-1 flex-1">
-            <span className="text-[10px] font-semibold uppercase tracking-wide">{l}</span>
-            {i < LINKS.length - 1 && <span className="ml-auto" />}
+            <span className="text-[10px] font-semibold uppercase tracking-wide">{t(l)}</span>
+            {i < LINK_KEYS.length - 1 && <span className="ml-auto" />}
           </div>
         ))}
       </div>
@@ -131,7 +134,7 @@ export default function ComplianceChain({ rows }: { rows: ComplianceChainRow[] }
                 style={{ background: 'var(--lemma-primary-soft)', minWidth: 64 }}
               >
                 <span className="text-[9px] font-semibold uppercase" style={{ color: 'var(--lemma-primary)' }}>
-                  Clause
+                  {t('chain.col.clause')}
                 </span>
                 <span className="text-[15px] font-bold md:mt-0.5 ml-1 md:ml-0" style={{ color: 'var(--lemma-primary)' }}>
                   {r.clause}

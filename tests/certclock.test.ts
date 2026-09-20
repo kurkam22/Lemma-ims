@@ -54,6 +54,10 @@ assert.equal(clock.months.length, 11, 'full months only')
 assert.equal(clock.months[0].label, 'Dec')
 assert.equal(clock.months[10].label, 'Oct')
 assert.equal(clock.daysToExpiry, 785)
+const koClock = buildClock({ today, issuedOn: issued, expiresOn: expires, external: [{ id: 'e2', kind: 'surveillance', planned_date: '2026-10-20', status: 'planned' }], internal: [{ id: 'i1', title: null, department: '생산', scheduled_date: '2026-09-08', status: 'completed' }], reviews: [], locale: 'ko' })
+assert.equal(koClock.next?.label, '사후심사')
+assert.equal(koClock.events.find((e) => e.kind === 'internal')!.label, '내부심사')
+assert.equal(koClock.months[0].label, '12월')
 
 // nothing planned -> no "next", no crash
 const bare = buildClock({ today, issuedOn: issued, expiresOn: expires, external: [], internal: [], reviews: [] })

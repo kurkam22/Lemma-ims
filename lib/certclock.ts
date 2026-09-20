@@ -7,6 +7,7 @@
 // Internal audits page) and management reviews (the Management review page).
 
 import { daysUntil } from '@/lib/attention'
+import { translate, type Locale } from '@/lib/i18n'
 
 export type ClockKind = 'external' | 'internal' | 'review'
 
@@ -17,6 +18,8 @@ export type ClockInput = {
   external: { id: string; kind: 'initial' | 'surveillance' | 'recertification'; planned_date: string; status: string }[]
   internal: { id: string; title: string | null; department: string; scheduled_date: string | null; status: string }[]
   reviews: { id: string; review_date: string | null; status: string }[]
+  /** Language of the labels. Defaults to English. */
+  locale?: Locale
 }
 
 export type ClockEvent = {
@@ -77,14 +80,15 @@ export function place(dateIso: string, issuedOn: string, expiresOn: string): { r
   return { ring: null, angle: null }
 }
 
-const EXTERNAL_LABEL = {
-  initial: 'Initial certification audit',
-  surveillance: 'Surveillance audit',
-  recertification: 'Recertification audit',
+const EXTERNAL_KEY = {
+  initial: 'att.audit.initial',
+  surveillance: 'att.audit.surveillance',
+  recertification: 'att.audit.recertification',
 } as const
 
 export function buildClock(input: ClockInput): ClockModel {
   const { today, issuedOn, expiresOn } = input
+  const locale: Locale = input.locale ?? 'en'
   const events: ClockEvent[] = []
   const add = (e: Omit<ClockEvent, 'daysLeft' | 'ring' | 'angle'>) => {
     const left = daysUntil(e.date, today)
@@ -95,15 +99,15 @@ export function buildClock(input: ClockInput): ClockModel {
 
   for (const a of input.external) {
     if (a.status === 'cancelled') continue
-    add({ id: `ext-${a.id}`, kind: 'external', label: EXTERNAL_LABEL[a.kind], sub: 'Audit by your certification body', date: a.planned_date, done: a.status === 'done' })
+    add({ id: `ext-${a.id}`, kind: 'external', label: translate(locale, EXTERNAL_KEY[a.kind]), sub: translate(locale, 'clock.sub.external'), date: a.planned_date, done: a.status === 'done' })
   }
   for (const a of input.internal) {
     if (!a.scheduled_date || a.status === 'cancelled') continue
-    add({ id: `int-${a.id}`, kind: 'internal', label: 'Internal audit', sub: a.title?.trim() || a.department, date: a.scheduled_date, done: a.status === 'completed' })
+    add({ id: `int-${a.id}`, kind: 'internal', label: translate(locale, 'clock.ev.internal'), sub: a.title?.trim() || a.department, date: a.scheduled_date, done: a.status === 'completed' })
   }
   for (const r of input.reviews) {
     if (!r.review_date) continue
-    add({ id: `rev-${r.id}`, kind: 'review', label: 'Management review', sub: 'Company meeting', date: r.review_date, done: r.status === 'completed' })
+    add({ id: `rev-${r.id}`, kind: 'review', label: translate(locale, 'clock.ev.review'), sub: translate(locale, 'clock.sub.review'), date: r.review_date, done: r.status === 'completed' })
   }
   events.sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : a.id.localeCompare(b.id)))
 
@@ -128,7 +132,7 @@ export function buildClock(input: ClockInput): ClockModel {
   }
   const months: { label: string; angle: number }[] = []
   for (let i = 0; i + 1 < boundaries.length; i++) {
-    months.push({ label: MONTHS[boundaries[i].month], angle: (boundaries[i].angle + boundaries[i + 1].angle) / 2 })
+    months.push({ label: locale === 'ko' ? `${boundaries[i].month + 1}월` : MONTHS[boundaries[i].month], angle: (boundaries[i].angle + boundaries[i + 1].angle) / 2 })
   }
 
   const t = place(toIso(today), issuedOn, expiresOn)
